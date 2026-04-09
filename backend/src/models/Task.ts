@@ -9,7 +9,7 @@ export interface Task {
   priority: 'Low' | 'Medium' | 'High';
   status: 'Todo' | 'In-Progress' | 'Completed';
   due_date?: Date;
-  completed_at?: Date;
+  completed_at?: Date | null;
   created_at: Date;
   updated_at: Date;
 }
