@@ -1,0 +1,22 @@
+.dashboard-container {
+  margin-bottom: 20px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 15px;
+}
+
+.stat-card {
+  background: rgba(255,255,255,0.06);
+  padding: 16px;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: bold;
+}

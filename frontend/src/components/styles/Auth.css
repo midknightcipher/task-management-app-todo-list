@@ -1,0 +1,31 @@
+.auth-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #0f172a, #312e81);
+}
+
+.auth-card {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(14px);
+  padding: 30px;
+  border-radius: 14px;
+  width: 320px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: white;
+}
+
+.auth-card button {
+  width: 100%;
+  margin-top: 15px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+}

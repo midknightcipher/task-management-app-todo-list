@@ -1,0 +1,38 @@
+.task-list-container {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(12px);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.task-item {
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.task-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.priority-badge {
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.priority-low { background: #22c55e; }
+.priority-medium { background: #f59e0b; }
+.priority-high { background: #ef4444; }
+
+.btn-toggle {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-delete {
+  background: #ef4444;
+  color: white;
+}
