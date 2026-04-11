@@ -1,16 +1,15 @@
 import React from 'react';
 import { Dashboard } from '../components/Analytics/Dashboard';
-import { CompletionRateChart } from '../components/Analytics/CompletionRateChart';
-import { PriorityBreakdown } from '../components/Analytics/PriorityBreakdown';
-import { ProductivityHeatmap } from '../components/Analytics/ProductivityHeatmap';
 import '../styles/Pages.css';
 
-export const AnalyticsPage: React.FC = () => {
-  return (
-    <div className="analytics-page">
-      <h1>Analytics & Productivity</h1>
-      <Dashboard />
-      
+export const AnalyticsPage: React.FC = () => (
+  <div className="page">
+    <div className="page__header">
+      <div>
+        <h1 className="page__title">Analytics</h1>
+        <p className="page__subtitle">Insights into your productivity and task progress</p>
+      </div>
     </div>
-  );
-};
+    <Dashboard />
+  </div>
+);

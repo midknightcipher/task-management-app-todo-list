@@ -16,6 +16,25 @@ export interface Task {
   updated_at: string;
 }
 
+// Used when creating a new task
+export interface CreateTaskInput {
+  title: string;
+  description?: string;
+  priority: 'Low' | 'Medium' | 'High';
+  status: 'Todo';
+  due_date?: string | null;
+}
+
+// Used when updating a task
+export interface UpdateTaskInput {
+  status?: 'Todo' | 'In-Progress' | 'Completed';
+  completed_at?: string | null;
+  title?: string;
+  description?: string;
+  priority?: 'Low' | 'Medium' | 'High';
+  due_date?: string | null;
+}
+
 export interface DashboardStats {
   totalTasks: number;
   completedTasks: number;
