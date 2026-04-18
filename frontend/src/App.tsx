@@ -66,7 +66,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 /* ── Sidebar ───────────────────────────────────────────────── */
-const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ collapsed, onToggle }) => {
+const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void; onNavClick?: () => void }> = ({ collapsed, onToggle, onNavClick }) => {
   const navigate = useNavigate();
   const user = authService.getUser();
   const initials = user?.email ? user.email[0].toUpperCase() : 'U';
@@ -96,6 +96,7 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ colla
           <NavLink
             key={to}
             to={to}
+            onClick={onNavClick}
             className={({ isActive }) => `sidebar__link${isActive ? ' sidebar__link--active' : ''}`}
           >
             <span className="sidebar__link-icon">{icon}</span>
@@ -130,10 +131,42 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ colla
 
 /* ── App shell ─────────────────────────────────────────────── */
 const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // On resize, auto-collapse when shrinking below 768px
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth < 768) {
+        setCollapsed(true);
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const isMobile = () => window.innerWidth < 768;
+
+  const handleToggle = () => {
+    if (isMobile()) {
+      setMobileOpen(o => !o);
+    } else {
+      setCollapsed(c => !c);
+    }
+  };
+
+  const closeMobile = () => setMobileOpen(false);
+
   return (
-    <div className={`shell${collapsed ? ' shell--collapsed' : ''}`}>
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
+    <div className={`shell${collapsed && !mobileOpen ? ' shell--collapsed' : ''}`}>
+      {/* Mobile overlay */}
+      {mobileOpen && <div className="sidebar-overlay" onClick={closeMobile} />}
+      <Sidebar
+        collapsed={collapsed && !mobileOpen}
+        onToggle={handleToggle}
+        onNavClick={() => { if (isMobile()) setMobileOpen(false); }}
+      />
       <main className="shell__main">
         <div className="shell__content">{children}</div>
       </main>

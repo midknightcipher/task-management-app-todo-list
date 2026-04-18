@@ -195,18 +195,15 @@ const DashboardPage: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const status = statusFilter !== 'All'
-        ? (statusFilter === 'In Progress' ? 'In-Progress' : statusFilter)
-        : undefined;
-      const prio = priorityFilter !== 'All Priorities' ? priorityFilter : undefined;
-      const res  = await tasksAPI.getAll(prio, status);
+      // Always fetch ALL tasks so stats stay accurate regardless of active filter
+      const res = await tasksAPI.getAll();
       setTasks(res.data || []);
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Failed to load tasks.');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, priorityFilter]);
+  }, []);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
@@ -258,6 +255,7 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  // Stats always computed from full task list
   const stats = {
     total: tasks.length,
     todo:  tasks.filter(t => t.status === 'Todo').length,
@@ -267,6 +265,16 @@ const DashboardPage: React.FC = () => {
 
   const completionPct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
   const FILTERS = ['All', 'Todo', 'In Progress', 'Completed'];
+
+  // Apply filters locally for display only
+  const displayedTasks = tasks.filter(t => {
+    const statusMatch =
+      statusFilter === 'All' ||
+      (statusFilter === 'In Progress' ? t.status === 'In-Progress' : t.status === statusFilter);
+    const priorityMatch =
+      priorityFilter === 'All Priorities' || t.priority === priorityFilter;
+    return statusMatch && priorityMatch;
+  });
 
   return (
     <div className="db">
@@ -390,7 +398,10 @@ const DashboardPage: React.FC = () => {
       <div className="db__list">
         {loading && [1, 2, 3].map(i => <TaskSkeleton key={i} />)}
         {!loading && tasks.length === 0 && !error && <EmptyState onNew={() => setFormOpen(true)} />}
-        {!loading && tasks.map((task, i) => (
+        {!loading && tasks.length > 0 && displayedTasks.length === 0 && (
+          <div className="db-empty" style={{ padding: "32px 0" }}><p className="db-empty__sub">No tasks match the current filter.</p></div>
+        )}
+        {!loading && displayedTasks.map((task, i) => (
           <TaskCard key={task.id} task={task} onStatusChange={updateStatus} onDelete={deleteTask} animDelay={i * 40} />
         ))}
       </div>

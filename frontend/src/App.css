@@ -310,8 +310,50 @@ input, select, textarea { font-family: inherit; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+
 /* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .shell__content { padding: 20px 16px 32px; }
-  .sidebar { position: fixed; height: 100vh; z-index: 100; }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 100;
+    width: var(--sb-collapsed) !important;
+    min-width: var(--sb-collapsed) !important;
+  }
+
+  /* Open state: sidebar slides in full-width */
+  .shell:not(.shell--collapsed) .sidebar {
+    width: var(--sb-width) !important;
+    min-width: var(--sb-width) !important;
+  }
+
+  /* Offset main so it's never hidden behind the icon strip */
+  .shell__main {
+    margin-left: var(--sb-collapsed);
+  }
+}
+
+/* ── Mobile overlay ─────────────────────────────────────────── */
+.sidebar-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 99;
+    animation: fadeInOverlay 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
