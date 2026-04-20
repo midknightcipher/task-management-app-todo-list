@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { tasksAPI } from '../services/api';
 import { Task, CreateTaskInput, UpdateTaskInput } from '../types';
+import { useWorkspace } from '../context/WorkspaceContext';
 import './DashboardPage.css';
 
 /* ── Icons ─────────────────────────────────────────────────── */
@@ -17,6 +18,7 @@ const I = {
   alertCircle:  () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
   inbox:        () => <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>,
   bell:         () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+  user:         () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
 };
 
 /* ── Config ────────────────────────────────────────────────── */
@@ -37,6 +39,17 @@ const Badge = ({ text, color, bg, border }: { text: string; color: string; bg: s
     {text}
   </span>
 );
+
+/* ── Assignee chip ─────────────────────────────────────────── */
+const AssigneeChip = ({ email }: { email: string }) => {
+  const initials = email.slice(0, 2).toUpperCase();
+  return (
+    <span className="db-task__assignee" title={`Assigned to ${email}`}>
+      <span className="db-task__assignee-avatar">{initials}</span>
+      <span className="db-task__assignee-email">{email}</span>
+    </span>
+  );
+};
 
 /* ── Stat card ─────────────────────────────────────────────── */
 interface StatProps { label: string; value: number; icon: React.ReactNode; gradient: string; iconColor: string; sub?: string; }
@@ -65,7 +78,6 @@ const TodayReminder = ({ tasks }: { tasks: Task[] }) => {
 
   if (dueToday.length === 0) return null;
 
-  // Build a readable list of task names
   const names = dueToday.map(t => t.title);
   const displayNames =
     names.length === 1
@@ -76,9 +88,7 @@ const TodayReminder = ({ tasks }: { tasks: Task[] }) => {
 
   return (
     <div className="db__reminder">
-      <div className="db__reminder-icon">
-        <I.bell />
-      </div>
+      <div className="db__reminder-icon"><I.bell /></div>
       <div className="db__reminder-body">
         <p className="db__reminder-title">
           Reminder — {dueToday.length} task{dueToday.length > 1 ? 's' : ''} due today
@@ -134,6 +144,7 @@ const TaskCard: React.FC<{
               Done {new Date(task.completed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
             </span>
           )}
+          {task.assigned_email && <AssigneeChip email={task.assigned_email} />}
         </div>
 
         <div className="db-task__actions">
@@ -177,13 +188,32 @@ const EmptyState = ({ onNew }: { onNew: () => void }) => (
   </div>
 );
 
+/* ── No workspace state ────────────────────────────────────── */
+const NoWorkspace = () => (
+  <div className="db-empty">
+    <div className="db-empty__icon">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    </div>
+    <h3 className="db-empty__title">No workspace selected</h3>
+    <p className="db-empty__sub">Select or create a workspace using the switcher in the sidebar to get started.</p>
+  </div>
+);
+
 /* ── Main page ─────────────────────────────────────────────── */
 const DashboardPage: React.FC = () => {
+  const { workspaceId, members } = useWorkspace();
+
   const [tasks, setTasks]                   = useState<Task[]>([]);
   const [title, setTitle]                   = useState('');
   const [description, setDescription]       = useState('');
   const [priority, setPriority]             = useState<'Low' | 'Medium' | 'High'>('Medium');
   const [dueDate, setDueDate]               = useState('');
+  const [assignedTo, setAssignedTo]         = useState('');
   const [statusFilter, setStatusFilter]     = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All Priorities');
   const [loading, setLoading]               = useState(true);
@@ -192,35 +222,43 @@ const DashboardPage: React.FC = () => {
   const [submitting, setSubmitting]         = useState(false);
 
   const fetchTasks = useCallback(async () => {
+    if (!workspaceId) {
+      setTasks([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError('');
-      // Always fetch ALL tasks so stats stay accurate regardless of active filter
-      const res = await tasksAPI.getAll();
+      const res = await tasksAPI.getAll({ workspaceId });
       setTasks(res.data || []);
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Failed to load tasks.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [workspaceId]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || !workspaceId) return;
     try {
       setSubmitting(true);
       const payload: CreateTaskInput = {
-        title, description, priority,
+        workspace_id: workspaceId,
+        title,
+        description,
+        priority,
         due_date: dueDate || null,
         status: 'Todo',
+        assigned_to: assignedTo || null,
       };
       const res = await tasksAPI.create(payload);
       if (res.data) {
         setTasks(p => [res.data, ...p]);
-        setTitle(''); setDescription(''); setPriority('Medium'); setDueDate('');
+        setTitle(''); setDescription(''); setPriority('Medium'); setDueDate(''); setAssignedTo('');
         setFormOpen(false);
       }
     } catch (err: any) {
@@ -255,7 +293,6 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // Stats always computed from full task list
   const stats = {
     total: tasks.length,
     todo:  tasks.filter(t => t.status === 'Todo').length,
@@ -266,7 +303,6 @@ const DashboardPage: React.FC = () => {
   const completionPct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
   const FILTERS = ['All', 'Todo', 'In Progress', 'Completed'];
 
-  // Apply filters locally for display only
   const displayedTasks = tasks.filter(t => {
     const statusMatch =
       statusFilter === 'All' ||
@@ -284,15 +320,19 @@ const DashboardPage: React.FC = () => {
         <div>
           <h1 className="db__title">Dashboard</h1>
           <p className="db__subtitle">
-            {stats.total === 0
+            {!workspaceId
+              ? 'Select a workspace to get started'
+              : stats.total === 0
               ? 'No tasks yet — create one to get started'
               : `${stats.done} of ${stats.total} tasks completed · ${completionPct}% done`}
           </p>
         </div>
-        <button className="db__new-btn" onClick={() => setFormOpen(o => !o)}>
-          <I.plus />
-          New Task
-        </button>
+        {workspaceId && (
+          <button className="db__new-btn" onClick={() => setFormOpen(o => !o)}>
+            <I.plus />
+            New Task
+          </button>
+        )}
       </div>
 
       {/* ── Error banner ──────────────────────────────── */}
@@ -304,108 +344,123 @@ const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* ── Today reminder ────────────────────────────── */}
-      <TodayReminder tasks={tasks} />
+      {/* ── No workspace ──────────────────────────────── */}
+      {!workspaceId && !loading && <NoWorkspace />}
 
-      {/* ── Stat cards ────────────────────────────────── */}
-      <div className="db__stats">
-        <StatCard label="Total Tasks" value={stats.total} icon={<I.layers />} gradient="linear-gradient(135deg,#e0f2fe,#bae6fd)" iconColor="#0284c7" sub={`${completionPct}% complete`} />
-        <StatCard label="To Do"       value={stats.todo}  icon={<I.clock />}  gradient="linear-gradient(135deg,#fffbeb,#fde68a)" iconColor="#d97706" />
-        <StatCard label="In Progress" value={stats.prog}  icon={<I.zap />}    gradient="linear-gradient(135deg,#eef2ff,#c7d2fe)" iconColor="#6366f1" />
-        <StatCard label="Completed"   value={stats.done}  icon={<I.star />}   gradient="linear-gradient(135deg,#ecfdf5,#a7f3d0)" iconColor="#059669" />
-      </div>
+      {workspaceId && (
+        <>
+          {/* ── Today reminder ──────────────────────────── */}
+          <TodayReminder tasks={tasks} />
 
-      {/* ── Progress bar ──────────────────────────────── */}
-      {stats.total > 0 && (
-        <div className="db__progress">
-          <div className="db__progress-bar">
-            <div className="db__progress-fill" style={{ width: `${completionPct}%` }} />
+          {/* ── Stat cards ──────────────────────────────── */}
+          <div className="db__stats">
+            <StatCard label="Total Tasks" value={stats.total} icon={<I.layers />} gradient="linear-gradient(135deg,#e0f2fe,#bae6fd)" iconColor="#0284c7" sub={`${completionPct}% complete`} />
+            <StatCard label="To Do"       value={stats.todo}  icon={<I.clock />}  gradient="linear-gradient(135deg,#fffbeb,#fde68a)" iconColor="#d97706" />
+            <StatCard label="In Progress" value={stats.prog}  icon={<I.zap />}    gradient="linear-gradient(135deg,#eef2ff,#c7d2fe)" iconColor="#6366f1" />
+            <StatCard label="Completed"   value={stats.done}  icon={<I.star />}   gradient="linear-gradient(135deg,#ecfdf5,#a7f3d0)" iconColor="#059669" />
           </div>
-          <span className="db__progress-label">{completionPct}% complete</span>
-        </div>
-      )}
 
-      {/* ── New task form ──────────────────────────────── */}
-      {formOpen && (
-        <div className="db__form-card">
-          <div className="db__form-header">
-            <h2 className="db__form-title">New Task</h2>
-            <button className="db__form-close" onClick={() => setFormOpen(false)}>✕</button>
-          </div>
-          <form onSubmit={handleCreate} className="db__form">
-            <div className="db__form-row">
-              <div className="db__field db__field--grow">
-                <label className="db__label">Title <span style={{ color: '#ef4444' }}>*</span></label>
-                <input className="db__input" type="text" placeholder="What needs to be done?" value={title} onChange={e => setTitle(e.target.value)} required autoFocus />
+          {/* ── Progress bar ────────────────────────────── */}
+          {stats.total > 0 && (
+            <div className="db__progress">
+              <div className="db__progress-bar">
+                <div className="db__progress-fill" style={{ width: `${completionPct}%` }} />
               </div>
+              <span className="db__progress-label">{completionPct}% complete</span>
             </div>
-            <div className="db__field">
-              <label className="db__label">Description <span className="db__label-opt">(optional)</span></label>
-              <textarea className="db__input db__textarea" placeholder="Add details or context..." value={description} onChange={e => setDescription(e.target.value)} rows={3} />
+          )}
+
+          {/* ── New task form ────────────────────────────── */}
+          {formOpen && (
+            <div className="db__form-card">
+              <div className="db__form-header">
+                <h2 className="db__form-title">New Task</h2>
+                <button className="db__form-close" onClick={() => setFormOpen(false)}>✕</button>
+              </div>
+              <form onSubmit={handleCreate} className="db__form">
+                <div className="db__form-row">
+                  <div className="db__field db__field--grow">
+                    <label className="db__label">Title <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input className="db__input" type="text" placeholder="What needs to be done?" value={title} onChange={e => setTitle(e.target.value)} required autoFocus />
+                  </div>
+                </div>
+                <div className="db__field">
+                  <label className="db__label">Description <span className="db__label-opt">(optional)</span></label>
+                  <textarea className="db__input db__textarea" placeholder="Add details or context..." value={description} onChange={e => setDescription(e.target.value)} rows={3} />
+                </div>
+                <div className="db__form-row">
+                  <div className="db__field">
+                    <label className="db__label">Priority</label>
+                    <select className="db__input db__select" value={priority} onChange={e => setPriority(e.target.value as 'Low' | 'Medium' | 'High')}>
+                      <option>Low</option><option>Medium</option><option>High</option>
+                    </select>
+                  </div>
+                  <div className="db__field">
+                    <label className="db__label">Due date</label>
+                    <input className="db__input" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                  </div>
+                  <div className="db__field">
+                    <label className="db__label">Assign to <span className="db__label-opt">(optional)</span></label>
+                    <select className="db__input db__select" value={assignedTo} onChange={e => setAssignedTo(e.target.value)}>
+                      <option value="">Unassigned</option>
+                      {members.map(m => (
+                        <option key={m.user_id} value={m.user_id}>{m.email}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="db__form-footer">
+                  <button type="button" className="db__btn db__btn--ghost" onClick={() => setFormOpen(false)}>Cancel</button>
+                  <button type="submit" className="db__btn db__btn--primary" disabled={submitting}>
+                    {submitting ? <><span className="db__spinner-sm" /> Creating…</> : <><I.plus /> Create Task</>}
+                  </button>
+                </div>
+              </form>
             </div>
-            <div className="db__form-row">
-              <div className="db__field">
-                <label className="db__label">Priority</label>
-                <select className="db__input db__select" value={priority} onChange={e => setPriority(e.target.value as 'Low' | 'Medium' | 'High')}>
-                  <option>Low</option><option>Medium</option><option>High</option>
+          )}
+
+          {/* ── Filters ─────────────────────────────────── */}
+          <div className="db__filters">
+            <div className="db__filter-tabs">
+              {FILTERS.map(f => (
+                <button
+                  key={f}
+                  className={`db__filter-tab${statusFilter === f ? ' db__filter-tab--active' : ''}`}
+                  onClick={() => setStatusFilter(f)}
+                >
+                  {f}
+                  {f !== 'All' && (
+                    <span className="db__filter-count">
+                      {f === 'Todo' ? stats.todo : f === 'In Progress' ? stats.prog : stats.done}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="db__filter-right">
+              <div className="db__select-wrap">
+                <select className="db__input db__select db__select--sm" value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
+                  <option>All Priorities</option>
+                  <option>High</option><option>Medium</option><option>Low</option>
                 </select>
-              </div>
-              <div className="db__field">
-                <label className="db__label">Due date</label>
-                <input className="db__input" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                <I.chevronDown />
               </div>
             </div>
-            <div className="db__form-footer">
-              <button type="button" className="db__btn db__btn--ghost" onClick={() => setFormOpen(false)}>Cancel</button>
-              <button type="submit" className="db__btn db__btn--primary" disabled={submitting}>
-                {submitting ? <><span className="db__spinner-sm" /> Creating…</> : <><I.plus /> Create Task</>}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* ── Filters ───────────────────────────────────── */}
-      <div className="db__filters">
-        <div className="db__filter-tabs">
-          {FILTERS.map(f => (
-            <button
-              key={f}
-              className={`db__filter-tab${statusFilter === f ? ' db__filter-tab--active' : ''}`}
-              onClick={() => setStatusFilter(f)}
-            >
-              {f}
-              {f !== 'All' && (
-                <span className="db__filter-count">
-                  {f === 'Todo' ? stats.todo : f === 'In Progress' ? stats.prog : stats.done}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-        <div className="db__filter-right">
-          <div className="db__select-wrap">
-            <select className="db__input db__select db__select--sm" value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
-              <option>All Priorities</option>
-              <option>High</option><option>Medium</option><option>Low</option>
-            </select>
-            <I.chevronDown />
           </div>
-        </div>
-      </div>
 
-      {/* ── Task list ─────────────────────────────────── */}
-      <div className="db__list">
-        {loading && [1, 2, 3].map(i => <TaskSkeleton key={i} />)}
-        {!loading && tasks.length === 0 && !error && <EmptyState onNew={() => setFormOpen(true)} />}
-        {!loading && tasks.length > 0 && displayedTasks.length === 0 && (
-          <div className="db-empty" style={{ padding: "32px 0" }}><p className="db-empty__sub">No tasks match the current filter.</p></div>
-        )}
-        {!loading && displayedTasks.map((task, i) => (
-          <TaskCard key={task.id} task={task} onStatusChange={updateStatus} onDelete={deleteTask} animDelay={i * 40} />
-        ))}
-      </div>
-
+          {/* ── Task list ───────────────────────────────── */}
+          <div className="db__list">
+            {loading && [1, 2, 3].map(i => <TaskSkeleton key={i} />)}
+            {!loading && tasks.length === 0 && !error && <EmptyState onNew={() => setFormOpen(true)} />}
+            {!loading && tasks.length > 0 && displayedTasks.length === 0 && (
+              <div className="db-empty" style={{ padding: "32px 0" }}><p className="db-empty__sub">No tasks match the current filter.</p></div>
+            )}
+            {!loading && displayedTasks.map((task, i) => (
+              <TaskCard key={task.id} task={task} onStatusChange={updateStatus} onDelete={deleteTask} animDelay={i * 40} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

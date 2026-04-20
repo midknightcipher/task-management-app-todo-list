@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { authService } from '../services/auth';
+import { useWorkspace } from '../context/WorkspaceContext';
 import './LoginPage.css';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const { refreshWorkspaces } = useWorkspace();
+
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
@@ -20,10 +23,14 @@ export const LoginPage: React.FC = () => {
       const res = await authAPI.login(email, password);
       authService.setToken(res.data.token);
       authService.setUser(res.data.user);
+      // Eagerly load workspaces so the dashboard shows immediately
+      await refreshWorkspaces();
       navigate('/dashboard');
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Invalid email or password.');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -48,7 +55,11 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="auth__features">
-            {['Task tracking & prioritisation', 'Analytics & productivity insights', 'Team-ready from day one'].map(f => (
+            {[
+              'Task tracking & prioritisation',
+              'Analytics & productivity insights',
+              'Team-ready from day one',
+            ].map(f => (
               <div key={f} className="auth__feature">
                 <span className="auth__feature-dot" />
                 <span>{f}</span>
@@ -71,14 +82,30 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="auth__form">
             <div className="auth__field">
               <label className="auth__label">Email address</label>
-              <input className="auth__input" type="email" placeholder="you@company.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />
+              <input
+                className="auth__input"
+                type="email"
+                placeholder="you@company.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+              />
             </div>
             <div className="auth__field">
               <div className="auth__label-row">
                 <label className="auth__label">Password</label>
                 <a href="#" className="auth__link-sm">Forgot password?</a>
               </div>
-              <input className="auth__input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" required />
+              <input
+                className="auth__input"
+                type="password"
+                placeholder="Your password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
             </div>
             <button type="submit" className="auth__submit" disabled={loading}>
               {loading ? <><span className="auth__spinner" />Signing in…</> : 'Sign in'}
@@ -86,12 +113,11 @@ export const LoginPage: React.FC = () => {
           </form>
 
           <p className="auth__footer">
-            New to TaskPilot? <Link to="/signup" className="auth__link">Create a free account</Link>
+            Don't have an account?{' '}
+            <Link to="/signup" className="auth__link">Create one free</Link>
           </p>
         </div>
       </div>
     </div>
   );
 };
-
-export default LoginPage;

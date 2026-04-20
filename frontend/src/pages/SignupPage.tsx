@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { authService } from '../services/auth';
+import { useWorkspace } from '../context/WorkspaceContext';
 import './LoginPage.css';
 
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
+  const { refreshWorkspaces, setWorkspaceId } = useWorkspace();
+
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
@@ -21,10 +24,20 @@ export const SignupPage: React.FC = () => {
       const res = await authAPI.signup(email, password);
       authService.setToken(res.data.token);
       authService.setUser(res.data.user);
+
+      // Signup returns the auto-created workspace — pre-select it immediately
+      if (res.data.workspace?.id) {
+        setWorkspaceId(res.data.workspace.id);
+      }
+
+      // Also refresh full workspace list so context is populated
+      await refreshWorkspaces();
       navigate('/dashboard');
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Signup failed. Please try again.');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -46,8 +59,15 @@ export const SignupPage: React.FC = () => {
             <p className="auth__brand-sub">Create your free workspace in seconds. No credit card needed. Start tracking what matters.</p>
           </div>
           <div className="auth__features">
-            {['Free forever — no credit card needed', 'Up and running in under 2 minutes', 'Full analytics from day one'].map(f => (
-              <div key={f} className="auth__feature"><span className="auth__feature-dot" /><span>{f}</span></div>
+            {[
+              'Free forever — no credit card needed',
+              'Up and running in under 2 minutes',
+              'Full analytics from day one',
+            ].map(f => (
+              <div key={f} className="auth__feature">
+                <span className="auth__feature-dot" />
+                <span>{f}</span>
+              </div>
             ))}
           </div>
         </div>
@@ -65,11 +85,28 @@ export const SignupPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="auth__form">
             <div className="auth__field">
               <label className="auth__label">Email address</label>
-              <input className="auth__input" type="email" placeholder="you@company.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />
+              <input
+                className="auth__input"
+                type="email"
+                placeholder="you@company.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+              />
             </div>
             <div className="auth__field">
               <label className="auth__label">Password</label>
-              <input className="auth__input" type="password" placeholder="Min. 6 characters" value={password} onChange={e => setPassword(e.target.value)} autoComplete="new-password" required minLength={6} />
+              <input
+                className="auth__input"
+                type="password"
+                placeholder="Min. 6 characters"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+                minLength={6}
+              />
             </div>
             <button type="submit" className="auth__submit" disabled={loading}>
               {loading ? <><span className="auth__spinner" />Creating account…</> : 'Create account'}
@@ -77,12 +114,11 @@ export const SignupPage: React.FC = () => {
           </form>
 
           <p className="auth__footer">
-            Already have an account? <Link to="/login" className="auth__link">Sign in</Link>
+            Already have an account?{' '}
+            <Link to="/login" className="auth__link">Sign in</Link>
           </p>
         </div>
       </div>
     </div>
   );
 };
-
-export default SignupPage;

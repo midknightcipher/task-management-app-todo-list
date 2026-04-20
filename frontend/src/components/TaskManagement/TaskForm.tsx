@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { tasksAPI } from '../../services/api';
+import { useWorkspace } from '../../context/WorkspaceContext';
 import '../styles/TaskForm.css';
 
 interface TaskFormProps {
@@ -7,31 +8,43 @@ interface TaskFormProps {
 }
 
 export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated }) => {
-  const [title, setTitle] = useState('');
+  const { workspaceId, members } = useWorkspace();
+
+  const [title, setTitle]           = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
-  const [dueDate, setDueDate] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [priority, setPriority]     = useState<'Low' | 'Medium' | 'High'>('Medium');
+  const [dueDate, setDueDate]       = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!workspaceId) {
+      setError('No workspace selected. Please select a workspace first.');
+      return;
+    }
+
     setError('');
     setLoading(true);
 
     try {
       await tasksAPI.create({
+        workspace_id: workspaceId,
         title,
         description,
         priority,
         due_date: dueDate || null,
         status: 'Todo',
+        assigned_to: assignedTo || null,
       });
 
       setTitle('');
       setDescription('');
       setPriority('Medium');
       setDueDate('');
+      setAssignedTo('');
       onTaskCreated();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to create task');
@@ -39,6 +52,16 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated }) => {
       setLoading(false);
     }
   };
+
+  if (!workspaceId) {
+    return (
+      <div className="task-form-container">
+        <p style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>
+          Select a workspace to create tasks.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="task-form-container">
@@ -90,6 +113,24 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated }) => {
               onChange={(e) => setDueDate(e.target.value)}
             />
           </div>
+
+          {members.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="assignedTo">Assign To</label>
+              <select
+                id="assignedTo"
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+              >
+                <option value="">Unassigned</option>
+                {members.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <button type="submit" disabled={loading}>

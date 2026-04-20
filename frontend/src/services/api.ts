@@ -7,6 +7,10 @@ import {
   PriorityBreakdown,
   HeatmapData,
   User,
+  Workspace,
+  WorkspaceMember,
+  ActivityLog,
+  Comment,
 } from '../types';
 import { authService } from './auth';
 
@@ -18,7 +22,6 @@ const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Attach JWT token to every request
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -27,7 +30,6 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// If token expires, log user out automatically
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -41,31 +43,81 @@ apiClient.interceptors.response.use(
 
 export const authAPI = {
   signup: (email: string, password: string) =>
-    apiClient.post<{ token: string; user: User }>('/auth/signup', { email, password }),
+    apiClient.post<{ token: string; user: User; workspace: Workspace }>(
+      '/auth/signup',
+      { email, password }
+    ),
   login: (email: string, password: string) =>
-    apiClient.post<{ token: string; user: User }>('/auth/login', { email, password }),
+    apiClient.post<{ token: string; user: User }>('/auth/login', {
+      email,
+      password,
+    }),
 };
+
+export interface GetTasksParams {
+  workspaceId: string;
+  priority?: string;
+  status?: string;
+}
 
 export const tasksAPI = {
   create: (taskData: CreateTaskInput) =>
     apiClient.post<Task>('/tasks', taskData),
-  getAll: (priority?: string, status?: string) =>
-    apiClient.get<Task[]>('/tasks', { params: { priority, status } }),
-  getById: (id: string) =>
-    apiClient.get<Task>(`/tasks/${id}`),
+  getAll: ({ workspaceId, priority, status }: GetTasksParams) =>
+    apiClient.get<Task[]>('/tasks', {
+      params: { workspace_id: workspaceId, priority, status },
+    }),
+  getById: (id: string) => apiClient.get<Task>(`/tasks/${id}`),
   update: (id: string, updateData: UpdateTaskInput) =>
     apiClient.put<Task>(`/tasks/${id}`, updateData),
-  delete: (id: string) =>
-    apiClient.delete(`/tasks/${id}`),
-  toggle: (id: string) =>
-    apiClient.patch<Task>(`/tasks/${id}/toggle`),
+  delete: (id: string) => apiClient.delete(`/tasks/${id}`),
+  toggle: (id: string) => apiClient.patch<Task>(`/tasks/${id}/toggle`),
 };
 
 export const analyticsAPI = {
-  getDashboardStats: () =>
-    apiClient.get<DashboardStats>('/analytics/dashboard'),
-  getPriorityAnalytics: () =>
-    apiClient.get<PriorityBreakdown[]>('/analytics/priority'),
-  getProductivityHeatmap: () =>
-    apiClient.get<HeatmapData[]>('/analytics/heatmap'),
+  getDashboardStats: (workspaceId?: string) =>
+    apiClient.get<DashboardStats>('/analytics/dashboard', {
+      params: workspaceId ? { workspace_id: workspaceId } : {},
+    }),
+  getPriorityAnalytics: (workspaceId?: string) =>
+    apiClient.get<PriorityBreakdown[]>('/analytics/priority', {
+      params: workspaceId ? { workspace_id: workspaceId } : {},
+    }),
+  getProductivityHeatmap: (workspaceId?: string) =>
+    apiClient.get<HeatmapData[]>('/analytics/heatmap', {
+      params: workspaceId ? { workspace_id: workspaceId } : {},
+    }),
+};
+
+export const workspaceAPI = {
+  create: (name: string) =>
+    apiClient.post<Workspace>('/workspace', { name }),
+  getAll: () => apiClient.get<Workspace[]>('/workspace'),
+  invite: (workspace_id: string, email: string, role: string = 'member') =>
+    apiClient.post<WorkspaceMember>('/workspace/invite', {
+      workspace_id,
+      email,
+      role,
+    }),
+  getMembers: (workspaceId: string) =>
+    apiClient.get<WorkspaceMember[]>(`/workspace/${workspaceId}/members`),
+};
+
+export const activityAPI = {
+  getWorkspaceActivity: (workspaceId: string, limit?: number) =>
+    apiClient.get<ActivityLog[]>('/activity', {
+      params: { workspaceId, limit },
+    }),
+  getTaskActivity: (taskId: string) =>
+    apiClient.get<ActivityLog[]>('/activity/task', {
+      params: { taskId },
+    }),
+};
+
+export const commentsAPI = {
+  getByTask: (taskId: string) =>
+    apiClient.get<Comment[]>('/comments', { params: { taskId } }),
+  create: (task_id: string, content: string) =>
+    apiClient.post<Comment>('/comments', { task_id, content }),
+  delete: (id: string) => apiClient.delete(`/comments/${id}`),
 };

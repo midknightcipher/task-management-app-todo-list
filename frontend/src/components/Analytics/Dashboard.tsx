@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { DashboardStats, PriorityBreakdown, HeatmapData, Task } from '../../types';
 import { analyticsAPI, tasksAPI } from '../../services/api';
+import { useWorkspace } from '../../context/WorkspaceContext';
 import '../styles/Dashboard.css';
 
 /* ── Icons ─────────────────────────────────────────────────── */
@@ -21,15 +22,12 @@ const Icons = {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   DATA DERIVATION — deterministic, no randomness
+   DATA DERIVATION
    ═══════════════════════════════════════════════════════════════ */
 
-/**
- * Groups tasks by which day of the CURRENT week they were created/completed.
- */
 function deriveWeeklyData(tasks: Task[]) {
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon…6=Sat
+  const dayOfWeek = today.getDay();
   const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
 
   const weekStart = new Date(today);
@@ -57,9 +55,6 @@ function deriveWeeklyData(tasks: Task[]) {
   });
 }
 
-/**
- * Derives real productivity metrics from task data.
- */
 function deriveProductivityInsights(tasks: Task[]) {
   const now = new Date();
 
@@ -70,8 +65,6 @@ function deriveProductivityInsights(tasks: Task[]) {
     t => new Date(t.completed_at!) <= new Date(t.due_date!)
   );
 
-  
-  // Correct denominator = completed-with-due + overdue-incomplete (all "accountable" tasks).
   const overdueIncomplete = tasks.filter(
     t => t.due_date && t.status !== 'Completed' && new Date(t.due_date) < now
   );
@@ -243,18 +236,18 @@ const ProductivityInsights = ({ tasks }: { tasks: Task[] }) => {
 };
 
 /* ── Heatmap ────────────────────────────────────────────────── */
-const HeatmapSection = () => {
+const HeatmapSection = ({ workspaceId }: { workspaceId: string | null }) => {
   const [data, setData]       = useState<HeatmapData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    analyticsAPI.getProductivityHeatmap()
+    setLoading(true);
+    analyticsAPI.getProductivityHeatmap(workspaceId ?? undefined)
       .then(r => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [workspaceId]);
 
-  // 35 days = 5 rows × 7 cols (GitHub-style)
   const last35 = useMemo(() =>
     Array.from({ length: 35 }, (_, i) => {
       const d = new Date();
@@ -268,7 +261,6 @@ const HeatmapSection = () => {
     [data]
   );
 
-  // Tighter intensity — 1 task = level 1, not lumped with 2
   const getLevel = (n: number) =>
     n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 5 ? 3 : 4;
 
@@ -280,7 +272,6 @@ const HeatmapSection = () => {
 
   return (
     <ChartCard title="30-Day Activity" sub="Tasks completed per day">
-      {/* FIX: was repeat(10, 1fr) — 1fr stretches cells. Now fixed 14px per cell. */}
       <div className="an-heatmap">
         {last35.map(date => {
           const count = countMap.get(date) || 0;
@@ -311,6 +302,8 @@ const HeatmapSection = () => {
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
 export const Dashboard: React.FC = () => {
+  const { workspaceId, loading: wsLoading } = useWorkspace();
+
   const [stats, setStats]       = useState<DashboardStats | null>(null);
   const [priority, setPriority] = useState<PriorityBreakdown[]>([]);
   const [tasks, setTasks]       = useState<Task[]>([]);
@@ -318,10 +311,18 @@ export const Dashboard: React.FC = () => {
   const [error, setError]       = useState('');
 
   useEffect(() => {
+    // Wait for workspace context to finish resolving before fetching
+    if (wsLoading) return;
+
+    setLoading(true);
+    setError('');
+
     Promise.all([
-      analyticsAPI.getDashboardStats(),
-      analyticsAPI.getPriorityAnalytics(),
-      tasksAPI.getAll(),           // needed for weekly chart + productivity insights
+      analyticsAPI.getDashboardStats(workspaceId ?? undefined),
+      analyticsAPI.getPriorityAnalytics(workspaceId ?? undefined),
+      workspaceId
+        ? tasksAPI.getAll({ workspaceId })
+        : Promise.resolve({ data: [] as Task[] }),
     ])
       .then(([statsRes, prioRes, tasksRes]) => {
         setStats(statsRes.data);
@@ -332,9 +333,8 @@ export const Dashboard: React.FC = () => {
         setError(err.response?.data?.error || 'Failed to load analytics');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [workspaceId, wsLoading]);
 
-  // useMemo — only recalculates when tasks array reference changes
   const weeklyData = useMemo(() => deriveWeeklyData(tasks), [tasks]);
 
   const pieData = useMemo(() =>
@@ -397,14 +397,12 @@ export const Dashboard: React.FC = () => {
                 data={pieData} cx="50%" cy="50%"
                 outerRadius={88} innerRadius={48}
                 dataKey="value" paddingAngle={3}
-                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
-                  // Render label OUTSIDE the arc but INSIDE the SVG via calculated coords.
-                  // This avoids the overflow:hidden clip that was cutting "Completed" off.
+                label={({ cx, cy, midAngle, outerRadius, percent, name }) => {
                   const RADIAN = Math.PI / 180;
                   const radius = outerRadius + 22;
                   const x = cx + radius * Math.cos(-midAngle * RADIAN);
                   const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                  if (percent < 0.06) return null; // skip label if slice too small
+                  if (percent < 0.06) return null;
                   return (
                     <text
                       x={x} y={y}
@@ -446,14 +444,13 @@ export const Dashboard: React.FC = () => {
           </ResponsiveContainer>
         </ChartCard>
 
-        {/* REPLACED redundant "Overdue vs Completed" */}
         <ChartCard title="Productivity Insights" sub="Deadline adherence and completion trends">
           <ProductivityInsights tasks={tasks} />
         </ChartCard>
       </div>
 
       {/* Heatmap */}
-      <HeatmapSection />
+      <HeatmapSection workspaceId={workspaceId} />
 
     </div>
   );

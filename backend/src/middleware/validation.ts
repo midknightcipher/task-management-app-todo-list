@@ -27,19 +27,32 @@ export const schemas = {
   }),
 
   createTask: Joi.object({
+    workspace_id: Joi.string().uuid().required(),
+    assigned_to: Joi.string().uuid().allow(null, '').optional(),
     title: Joi.string().max(255).required(),
-    description: Joi.string().allow(''),
+    description: Joi.string().allow('').optional(),
     priority: Joi.string().valid('Low', 'Medium', 'High').default('Medium'),
     status: Joi.string().valid('Todo', 'In-Progress', 'Completed').default('Todo'),
-    due_date: Joi.date().allow(null),
+    due_date: Joi.date().allow(null).optional(),
   }),
 
   updateTask: Joi.object({
-    title: Joi.string().max(255),
-    description: Joi.string().allow(''),
-    priority: Joi.string().valid('Low', 'Medium', 'High'),
-    status: Joi.string().valid('Todo', 'In-Progress', 'Completed'),
-    due_date: Joi.date().allow(null),
-    completed_at: Joi.date().allow(null),
+    assigned_to: Joi.string().uuid().allow(null, '').optional(),
+    title: Joi.string().max(255).optional(),
+    description: Joi.string().allow('').optional(),
+    priority: Joi.string().valid('Low', 'Medium', 'High').optional(),
+    status: Joi.string().valid('Todo', 'In-Progress', 'Completed').optional(),
+    due_date: Joi.date().allow(null).optional(),
+    completed_at: Joi.date().allow(null).optional(),
+  }),
+
+  createWorkspace: Joi.object({
+    name: Joi.string().max(255).required(),
+  }),
+
+  inviteToWorkspace: Joi.object({
+    workspace_id: Joi.string().uuid().required(),
+    email: Joi.string().email().required(),
+    role: Joi.string().valid('admin', 'member').default('member'),
   }),
 };

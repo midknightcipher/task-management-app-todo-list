@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { UserModel } from '../models/User';
+import { WorkspaceModel } from '../models/Workspace';
 import { generateToken } from '../utils/jwt';
 
 export const signup = async (req: Request, res: Response): Promise<void> => {
@@ -18,8 +19,15 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Auto-create a personal workspace for the new user
+    const workspace = await WorkspaceModel.create('My Workspace', user.id);
+
     const token = generateToken(user.id, user.email);
-    res.status(201).json({ token, user: { id: user.id, email: user.email } });
+    res.status(201).json({
+      token,
+      user: { id: user.id, email: user.email },
+      workspace,
+    });
   } catch (error) {
     console.error('Signup error:', error);
     res.status(500).json({ error: 'Internal server error' });
