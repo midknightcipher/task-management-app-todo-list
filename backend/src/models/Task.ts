@@ -12,6 +12,7 @@ export interface Task {
   completed_at?: Date | null;
   created_at: Date;
   updated_at: Date;
+  workspace_id?: string | null;
 }
 
 export class TaskModel {

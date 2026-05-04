@@ -17,19 +17,3 @@ export const logActivity = async (
     console.error('Activity log error:', err);
   }
 };
-
-export const getWorkspaceActivity = async (
-  workspaceId: string,
-  limit = 50,
-  offset = 0
-) => {
-  const { rows } = await pool.query(
-    `SELECT * FROM workspace_activity
-     WHERE workspace_id = $1
-     ORDER BY created_at DESC
-     LIMIT $2 OFFSET $3`,
-    [workspaceId, limit, offset]
-  );
-
-  return rows;
-};
