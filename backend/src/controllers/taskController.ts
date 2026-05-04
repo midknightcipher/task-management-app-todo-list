@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { TaskModel } from '../models/Task';
+import pool from '../utils/db';
+import { logActivity } from '../models/WorkspaceActivity';
 
 interface RequestWithUser extends Request {
   user?: {
@@ -8,146 +10,156 @@ interface RequestWithUser extends Request {
   };
 }
 
+const assertTaskAccess = async (taskId: string, userId: string): Promise<any | null | false> => {
+  const task = await TaskModel.findById(taskId);
+  if (!task) return null;
+
+  if (!task.workspace_id) {
+    return task.user_id === userId ? task : false;
+  }
+
+  const { rows } = await pool.query(
+    `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+    [task.workspace_id, userId]
+  );
+
+  return rows.length > 0 ? task : false;
+};
+
+// CREATE TASK
 export const createTask = async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
-    if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized' });
+    if (!req.user) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+    const { workspace_id } = req.body;
+
+    if (workspace_id && typeof workspace_id !== 'string') {
+      res.status(400).json({ error: 'Invalid workspace_id' });
       return;
     }
 
+    if (workspace_id) {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+        [workspace_id, req.user.userId]
+      );
+
+      if (rows.length === 0) {
+        res.status(403).json({ error: 'Not a member of this workspace' });
+        return;
+      }
+    }
+
     const task = await TaskModel.create(req.user.userId, req.body);
-    if (!task) {
-      res.status(500).json({ error: 'Failed to create task' });
-      return;
+    if (!task) { res.status(500).json({ error: 'Failed to create task' }); return; }
+
+    if (task.workspace_id) {
+      logActivity(task.workspace_id, req.user.userId, 'created_task', task.id).catch(console.error);
     }
 
     res.status(201).json(task);
   } catch (error) {
-    console.error('Create task error:', error);
+    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
+// GET TASKS
 export const getTasks = async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
-    if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized' });
+    if (!req.user) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+    const { priority, status, workspace_id } = req.query;
+    const workspaceId = workspace_id as string | undefined;
+
+    if (workspaceId) {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+        [workspaceId, req.user.userId]
+      );
+
+      if (rows.length === 0) {
+        res.status(403).json({ error: 'Not a member of this workspace' });
+        return;
+      }
+
+      const result = await pool.query(
+        `SELECT * FROM tasks WHERE workspace_id = $1 ORDER BY created_at DESC`,
+        [workspaceId]
+      );
+
+      res.json(result.rows);
       return;
     }
 
-    const { priority, status } = req.query;
     const tasks = await TaskModel.findByUserId(req.user.userId, {
-      priority: priority as string | undefined,
-      status: status as string | undefined,
+      priority: priority as string,
+      status: status as string
     });
 
     res.json(tasks);
   } catch (error) {
-    console.error('Get tasks error:', error);
+    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
+// GET TASK BY ID
 export const getTaskById = async (req: RequestWithUser, res: Response): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
+  const task = await assertTaskAccess(req.params.id, req.user!.userId);
 
-    const task = await TaskModel.findById(req.params.id);
-    if (!task || task.user_id !== req.user.userId) {
-      res.status(404).json({ error: 'Task not found' });
-      return;
-    }
+  if (task === null) return void res.status(404).json({ error: 'Not found' });
+  if (task === false) return void res.status(403).json({ error: 'Forbidden' });
 
-    res.json(task);
-  } catch (error) {
-    console.error('Get task error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+  res.json(task);
 };
 
+// UPDATE
 export const updateTask = async (req: RequestWithUser, res: Response): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
+  const task = await assertTaskAccess(req.params.id, req.user!.userId);
 
-    const task = await TaskModel.findById(req.params.id);
-    if (!task || task.user_id !== req.user.userId) {
-      res.status(404).json({ error: 'Task not found' });
-      return;
-    }
+  if (task === null) return void res.status(404).json({ error: 'Not found' });
+  if (task === false) return void res.status(403).json({ error: 'Forbidden' });
 
-    const updatedTask = await TaskModel.update(req.params.id, req.body);
-    if (!updatedTask) {
-      res.status(500).json({ error: 'Failed to update task' });
-      return;
-    }
+  const updated = await TaskModel.update(req.params.id, req.body);
 
-    res.json(updatedTask);
-  } catch (error) {
-    console.error('Update task error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  if (updated?.workspace_id) {
+    logActivity(updated.workspace_id, req.user!.userId, 'updated_task', updated.id).catch(console.error);
   }
+
+  res.json(updated);
 };
 
+// DELETE
 export const deleteTask = async (req: RequestWithUser, res: Response): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
+  const task = await assertTaskAccess(req.params.id, req.user!.userId);
 
-    const task = await TaskModel.findById(req.params.id);
-    if (!task || task.user_id !== req.user.userId) {
-      res.status(404).json({ error: 'Task not found' });
-      return;
-    }
+  if (task === null) return void res.status(404).json({ error: 'Not found' });
+  if (task === false) return void res.status(403).json({ error: 'Forbidden' });
 
-    const deleted = await TaskModel.delete(req.params.id);
-    if (!deleted) {
-      res.status(500).json({ error: 'Failed to delete task' });
-      return;
-    }
-
-    res.json({ message: 'Task deleted successfully' });
-  } catch (error) {
-    console.error('Delete task error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  if (task.workspace_id) {
+    logActivity(task.workspace_id, req.user!.userId, 'deleted_task', task.id).catch(console.error);
   }
+
+  await TaskModel.delete(req.params.id);
+  res.json({ message: 'Deleted' });
 };
 
+// TOGGLE
 export const toggleTaskCompletion = async (req: RequestWithUser, res: Response): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
+  const task = await assertTaskAccess(req.params.id, req.user!.userId);
 
-    const task = await TaskModel.findById(req.params.id);
-    if (!task || task.user_id !== req.user.userId) {
-      res.status(404).json({ error: 'Task not found' });
-      return;
-    }
+  if (task === null) return void res.status(404).json({ error: 'Not found' });
+  if (task === false) return void res.status(403).json({ error: 'Forbidden' });
 
-    const isCompleted = task.status === 'Completed';
+  const updated = await TaskModel.update(req.params.id, {
+    status: task.status === 'Completed' ? 'Todo' : 'Completed',
+    completed_at: task.status === 'Completed' ? null : new Date()
+  });
 
-    const updatedTask = await TaskModel.update(req.params.id, {
-      status: isCompleted ? 'Todo' : 'Completed',
-      completed_at: isCompleted ? null : new Date(),   // ✅ FIXED
-    });
-
-    if (!updatedTask) {
-      res.status(500).json({ error: 'Failed to update task' });
-      return;
-    }
-
-    res.json(updatedTask);
-  } catch (error) {
-    console.error('Toggle task error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  if (updated?.workspace_id) {
+    logActivity(updated.workspace_id, req.user!.userId, 'status_changed', updated.id).catch(console.error);
   }
+
+  res.json(updated);
 };

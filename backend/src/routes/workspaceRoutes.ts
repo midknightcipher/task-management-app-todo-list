@@ -1,9 +1,17 @@
 import express from 'express';
-import { createWorkspace } from '../controllers/workspaceController';
+import {
+  createWorkspace,
+  listWorkspaces,
+  inviteMember,
+} from '../controllers/workspaceController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
-router.post('/', authenticateToken, createWorkspace);
+router.use(authenticateToken);
+
+router.post('/', createWorkspace);
+router.get('/', listWorkspaces);
+router.post('/:id/invite', inviteMember);
 
 export default router;
