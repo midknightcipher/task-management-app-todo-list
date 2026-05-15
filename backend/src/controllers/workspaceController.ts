@@ -205,7 +205,7 @@ export const getActivity = async (req: RequestWithUser, res: Response): Promise<
   }
 };
 
-// ✅ ADDED: DELETE /workspaces/:id
+// ✅  DELETE /workspaces/:id
 export const deleteWorkspace = async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
     if (!req.user) { res.status(401).json({ error: 'Unauthorized' }); return; }
@@ -219,7 +219,7 @@ export const deleteWorkspace = async (req: RequestWithUser, res: Response): Prom
       return;
     }
 
-    // Because of your 'ON DELETE CASCADE' in init.sql, deleting this row 
+    
     // automatically deletes all attached members, tasks, and activity logs!
     await pool.query(`DELETE FROM workspaces WHERE id = $1`, [id]);
 
