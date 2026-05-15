@@ -4,27 +4,38 @@ import { v4 as uuidv4 } from 'uuid';
 export interface Task {
   id: string;
   user_id: string;
+  workspace_id?: string | null;
   title: string;
   description?: string;
   priority: 'Low' | 'Medium' | 'High';
   status: 'Todo' | 'In-Progress' | 'Completed';
   due_date?: Date;
   completed_at?: Date | null;
+  assignee_email?: string | null; // ✅ Added
   created_at: Date;
   updated_at: Date;
-  workspace_id?: string | null;
 }
 
 export class TaskModel {
   static async create(userId: string, taskData: Partial<Task>): Promise<Task | null> {
     try {
       const id = uuidv4();
-      const { title, description, priority, status, due_date } = taskData;
+      const { title, description, priority, status, due_date, workspace_id, assignee_email } = taskData;
 
       const result = await pool.query(
-        `INSERT INTO tasks (id, user_id, title, description, priority, status, due_date)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-        [id, userId, title, description || null, priority || 'Medium', status || 'Todo', due_date || null]
+        `INSERT INTO tasks (id, user_id, workspace_id, title, description, priority, status, due_date, assignee_email)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+        [
+          id,
+          userId,
+          workspace_id || null,
+          title,
+          description || null,
+          priority || 'Medium',
+          status || 'Todo',
+          due_date || null,
+          assignee_email || null // ✅ Added
+        ]
       );
 
       return result.rows[0];
@@ -34,9 +45,17 @@ export class TaskModel {
     }
   }
 
-  static async findByUserId(userId: string, filters?: { priority?: string; status?: string }): Promise<Task[]> {
+  static async findByUserId(
+    userId: string,
+    filters?: { priority?: string; status?: string }
+  ): Promise<Task[]> {
     try {
-      let query = 'SELECT * FROM tasks WHERE user_id = $1';
+      // ✅ SECURITY FIX: Fetch Personal Tasks OR Tasks from Workspaces the user is a member of
+      let query = `
+        SELECT * FROM tasks 
+        WHERE (user_id = $1 AND workspace_id IS NULL)
+           OR workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = $1)
+      `;
       const params: any[] = [userId];
 
       if (filters?.priority) {
@@ -71,7 +90,8 @@ export class TaskModel {
 
   static async update(taskId: string, updateData: Partial<Task>): Promise<Task | null> {
     try {
-      const allowedFields = ['title', 'description', 'priority', 'status', 'due_date', 'completed_at'];
+      // ✅ Added assignee_email to allowed fields
+      const allowedFields = ['title', 'description', 'priority', 'status', 'due_date', 'completed_at', 'assignee_email'];
       const fields: string[] = [];
       const values: any[] = [];
       let paramCount = 1;
@@ -110,18 +130,24 @@ export class TaskModel {
     }
   }
 
-  static async getStats(userId: string): Promise<any> {
+  // --- Analytics (workspace-aware) ---
+  static async getStats(userId: string, workspaceId?: string): Promise<any> {
     try {
-      const result = await pool.query(
-        `SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
-          SUM(CASE WHEN status != 'Completed' THEN 1 ELSE 0 END) as pending,
-          SUM(CASE WHEN status != 'Completed' AND due_date < CURRENT_DATE THEN 1 ELSE 0 END) as overdue
-        FROM tasks WHERE user_id = $1`,
-        [userId]
-      );
+      const query = workspaceId
+        ? `SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
+            SUM(CASE WHEN status != 'Completed' THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN status != 'Completed' AND due_date < CURRENT_DATE THEN 1 ELSE 0 END) as overdue
+           FROM tasks WHERE workspace_id = $1`
+        : `SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
+            SUM(CASE WHEN status != 'Completed' THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN status != 'Completed' AND due_date < CURRENT_DATE THEN 1 ELSE 0 END) as overdue
+           FROM tasks WHERE user_id = $1 AND workspace_id IS NULL`;
 
+      const result = await pool.query(query, [workspaceId ?? userId]);
       return result.rows[0];
     } catch (error) {
       console.error('Error getting stats:', error);
@@ -129,13 +155,13 @@ export class TaskModel {
     }
   }
 
-  static async getPriorityBreakdown(userId: string): Promise<any[]> {
+  static async getPriorityBreakdown(userId: string, workspaceId?: string): Promise<any[]> {
     try {
-      const result = await pool.query(
-        `SELECT priority, COUNT(*) as count FROM tasks WHERE user_id = $1 GROUP BY priority`,
-        [userId]
-      );
+      const query = workspaceId
+        ? `SELECT priority, COUNT(*) as count FROM tasks WHERE workspace_id = $1 GROUP BY priority`
+        : `SELECT priority, COUNT(*) as count FROM tasks WHERE user_id = $1 AND workspace_id IS NULL GROUP BY priority`;
 
+      const result = await pool.query(query, [workspaceId ?? userId]);
       return result.rows;
     } catch (error) {
       console.error('Error getting priority breakdown:', error);
@@ -143,26 +169,21 @@ export class TaskModel {
     }
   }
 
-  static async getCompletionHeatmap(userId: string): Promise<any[]> {
-  try {
-    const result = await pool.query(
-      `SELECT 
-        DATE(completed_at) as date,
-        COUNT(*) as completed_count
-      FROM tasks 
-      WHERE user_id = $1 
-        AND status = 'Completed'
-        AND completed_at IS NOT NULL                 -- ✅ CRITICAL
-        AND completed_at >= NOW() - INTERVAL '30 days'
-      GROUP BY DATE(completed_at)
-      ORDER BY date ASC`,
-      [userId]
-    );
+  static async getCompletionHeatmap(userId: string, workspaceId?: string): Promise<any[]> {
+    try {
+      const query = workspaceId
+        ? `SELECT DATE(completed_at) as date, COUNT(*) as completed_count
+           FROM tasks WHERE workspace_id = $1 AND status = 'Completed' AND completed_at IS NOT NULL AND completed_at >= NOW() - INTERVAL '30 days'
+           GROUP BY DATE(completed_at) ORDER BY date ASC`
+        : `SELECT DATE(completed_at) as date, COUNT(*) as completed_count
+           FROM tasks WHERE user_id = $1 AND workspace_id IS NULL AND status = 'Completed' AND completed_at IS NOT NULL AND completed_at >= NOW() - INTERVAL '30 days'
+           GROUP BY DATE(completed_at) ORDER BY date ASC`;
 
-    return result.rows;
-  } catch (error) {
-    console.error('Error getting completion heatmap:', error);
-    return [];
+      const result = await pool.query(query, [workspaceId ?? userId]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting completion heatmap:', error);
+      return [];
+    }
   }
-}
 }

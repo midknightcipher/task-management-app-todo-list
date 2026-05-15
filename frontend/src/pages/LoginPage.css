@@ -1,155 +1,168 @@
-/* LoginPage.css + SignupPage.css shared ────────────────────── */
-
-.auth {
-  display: flex;
+.auth-hero {
   min-height: 100vh;
-  font-family: 'IBM Plex Sans', sans-serif;
-}
-
-/* ── Brand panel ───────────────────────────────────────────── */
-.auth__brand {
-  flex: 1;
-  background: #080d18;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 56px 52px;
+  background-color: #0f172a;
   position: relative;
   overflow: hidden;
+  padding: 40px 20px;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
-/* Grid texture */
-.auth__brand::before {
-  content: '';
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(14,165,233,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(14,165,233,0.05) 1px, transparent 1px);
-  background-size: 44px 44px;
-  pointer-events: none;
-}
-/* Glow orb */
-.auth__brand::after {
-  content: '';
-  position: absolute; bottom: -120px; left: -80px;
-  width: 420px; height: 420px;
-  background: radial-gradient(circle, rgba(14,165,233,0.14) 0%, transparent 65%);
+/* Background Glowing Orbs */
+.shape {
+  position: absolute;
+  filter: blur(80px);
   border-radius: 50%;
-  pointer-events: none;
+  z-index: 0;
+}
+.shape-1 { width: 400px; height: 400px; background: rgba(14, 165, 233, 0.15); top: -100px; right: -100px; }
+.shape-2 { width: 300px; height: 300px; background: rgba(99, 102, 241, 0.12); bottom: -50px; left: -50px; }
+
+.auth-container {
+  width: 100%;
+  max-width: 1100px;
+  position: relative;
+  z-index: 1;
 }
 
-.auth__brand-inner { max-width: 400px; position: relative; z-index: 1; }
+.auth-content {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
 
-.auth__logo { display: flex; align-items: center; gap: 10px; margin-bottom: 56px; }
-.auth__logo-mark {
-  width: 36px; height: 36px;
-  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
-  border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
+/* Left Branding Side */
+.logo-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 14px;
+  border-radius: 100px;
+  width: fit-content;
   color: #fff;
-  box-shadow: 0 0 0 1px rgba(14,165,233,0.4), 0 4px 12px rgba(14,165,233,0.3);
-}
-.auth__logo-name {
-  font-family: 'Outfit', sans-serif;
-  font-size: 18px; font-weight: 700;
-  color: #fff; letter-spacing: -0.3px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.auth__brand-copy { margin-bottom: 36px; }
-.auth__brand-headline {
-  font-family: 'Outfit', sans-serif;
-  font-size: 32px; font-weight: 700;
-  color: #fff; line-height: 1.2;
-  letter-spacing: -0.8px; margin-bottom: 14px;
-}
-.auth__brand-sub { font-size: 14.5px; color: rgba(255,255,255,0.45); line-height: 1.65; }
+.logo-icon { color: #0ea5e9; display: flex; align-items: center; }
 
-.auth__features { display: flex; flex-direction: column; gap: 10px; }
-.auth__feature {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 13.5px; color: rgba(255,255,255,0.5);
-}
-.auth__feature-dot {
-  width: 6px; height: 6px; min-width: 6px;
-  border-radius: 50%; background: #0ea5e9;
+.brand-section h1 {
+  font-size: 48px;
+  color: #fff;
+  line-height: 1.1;
+  margin: 24px 0;
+  font-weight: 800;
+  letter-spacing: -1.5px;
 }
 
-/* ── Form panel ────────────────────────────────────────────── */
-.auth__form-side {
-  width: 460px; min-width: 380px;
-  display: flex; align-items: center; justify-content: center;
-  background: #fafbfc;
-  padding: 48px 40px;
+.text-gradient {
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+  -webkit-background-clip: text; /* Vendor-specific for Chrome/Safari */
+  background-clip: text;         /* ✅ Standard property for compatibility */
+  -webkit-text-fill-color: transparent;
 }
-.auth__form-wrap { width: 100%; max-width: 360px; }
 
-.auth__form-head { margin-bottom: 28px; }
-.auth__form-title {
-  font-family: 'Outfit', sans-serif;
-  font-size: 23px; font-weight: 700;
-  color: #0f172a; letter-spacing: -0.5px; margin: 0 0 5px;
+.brand-section p {
+  color: #94a3b8;
+  font-size: 18px;
+  line-height: 1.6;
+  margin-bottom: 32px;
+  max-width: 480px;
 }
-.auth__form-sub { font-size: 13.5px; color: #64748b; }
+
+.feature-list {
+  list-style: none;
+  padding: 0;
+}
+
+.feature-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #cbd5e1;
+  margin-bottom: 16px;
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.feature-list li svg { color: #0ea5e9; }
+
+/* The Glass Auth Card */
+.auth-card {
+  background: rgba(30, 41, 59, 0.5);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.auth-card-header h2 { color: #fff; font-size: 26px; margin-bottom: 8px; letter-spacing: -0.5px; }
+.auth-card-header p { color: #94a3b8; font-size: 14px; margin-bottom: 32px; }
 
 .auth__error {
-  background: #fef2f2; border: 1px solid #fecaca;
-  color: #dc2626; font-size: 13px;
-  padding: 10px 14px; border-radius: 8px;
-  margin-bottom: 20px; line-height: 1.5;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  margin-bottom: 24px;
 }
 
-.auth__form { display: flex; flex-direction: column; gap: 18px; margin-bottom: 24px; }
-.auth__field { display: flex; flex-direction: column; gap: 6px; }
-.auth__label { font-size: 12.5px; font-weight: 500; color: #374151; }
-.auth__label-row { display: flex; justify-content: space-between; align-items: center; }
-.auth__link-sm { font-size: 12px; color: #0ea5e9; text-decoration: none; }
-.auth__link-sm:hover { text-decoration: underline; }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; color: #e2e8f0; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
 
-.auth__input {
-  padding: 10px 14px;
-  border: 1px solid #d1d5db; border-radius: 9px;
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 14px; color: #0f172a; background: #fff;
+.label-row { display: flex; justify-content: space-between; align-items: center; }
+.forgot-link { font-size: 12px; color: #38bdf8; text-decoration: none; }
+
+.auth-form input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #fff;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.auth-form input:focus {
+  border-color: #38bdf8;
   outline: none;
-  transition: border-color 150ms, box-shadow 150ms;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
 }
-.auth__input:focus {
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+
+.btn-auth-submit {
+  width: 100%;
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.2s;
 }
-.auth__input::placeholder { color: #9ca3af; }
 
-.auth__submit {
-  width: 100%; padding: 11px;
-  background: #0ea5e9; color: #fff; border: none;
-  border-radius: 9px;
-  font-family: 'IBM Plex Sans', sans-serif; font-size: 14.5px; font-weight: 500;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  gap: 8px; min-height: 44px; margin-top: 4px;
-  box-shadow: 0 1px 3px rgba(14,165,233,0.3);
-  transition: background 150ms, transform 100ms, box-shadow 150ms;
-}
-.auth__submit:hover   { background: #0284c7; box-shadow: 0 4px 12px rgba(14,165,233,0.35); }
-.auth__submit:active  { transform: scale(0.98); }
-.auth__submit:disabled { background: #7dd3fc; cursor: not-allowed; transform: none; }
+.btn-auth-submit:hover { background: #0284c7; transform: translateY(-1px); }
+.btn-auth-submit:disabled { opacity: 0.7; cursor: not-allowed; }
 
-.auth__spinner {
-  width: 16px; height: 16px;
-  border: 2px solid rgba(255,255,255,0.4);
-  border-top-color: #fff; border-radius: 50%;
-  animation: authSpin 650ms linear infinite;
-  display: inline-block;
-}
-@keyframes authSpin { to { transform: rotate(360deg); } }
+.auth-card-footer { text-align: center; margin-top: 24px; }
+.auth-card-footer p { color: #94a3b8; font-size: 14px; }
+.auth-card-footer a { color: #38bdf8; text-decoration: none; font-weight: 600; }
 
-.auth__footer { font-size: 13.5px; color: #64748b; text-align: center; }
-.auth__link { color: #0ea5e9; text-decoration: none; font-weight: 500; }
-.auth__link:hover { text-decoration: underline; }
-
-/* ── Responsive ────────────────────────────────────────────── */
-@media (max-width: 760px) {
-  .auth { flex-direction: column; }
-  .auth__brand { flex: none; padding: 40px 28px 36px; min-height: 260px; }
-  .auth__brand-headline { font-size: 26px; }
-  .auth__form-side { width: 100%; min-width: 0; padding: 36px 24px; }
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .auth-content { grid-template-columns: 1fr; gap: 40px; text-align: center; }
+  .brand-section h1 { font-size: 36px; }
+  .brand-section p { margin: 0 auto 32px; }
+  .feature-list { display: none; }
+  .logo-pill { margin: 0 auto; }
 }

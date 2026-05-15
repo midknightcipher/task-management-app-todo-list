@@ -6,13 +6,16 @@ import {
   DashboardStats,
   PriorityBreakdown,
   HeatmapData,
+  Workspace,
+  WorkspaceMember,
+  WorkspaceActivity,
   User,
 } from '../types';
 import { authService } from './auth';
 
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL ||
-  'https://task-management-backend-mo32.onrender.com/api';
+  'http://localhost:5001/api';
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -53,8 +56,8 @@ export const tasksAPI = {
   create: (taskData: CreateTaskInput) =>
     apiClient.post<Task>('/tasks', taskData),
 
-  getAll: (priority?: string, status?: string) =>
-    apiClient.get<Task[]>('/tasks', { params: { priority, status } }),
+  getAll: (priority?: string, status?: string, workspace_id?: string) =>
+    apiClient.get<Task[]>('/tasks', { params: { priority, status, workspace_id } }),
 
   getById: (id: string) =>
     apiClient.get<Task>(`/tasks/${id}`),
@@ -71,29 +74,41 @@ export const tasksAPI = {
 
 // ================= ANALYTICS =================
 export const analyticsAPI = {
-  getDashboardStats: () =>
-    apiClient.get<DashboardStats>('/analytics/dashboard'),
+  getDashboardStats: (workspace_id?: string) =>
+    apiClient.get<DashboardStats>('/analytics/dashboard', { params: { workspace_id } }),
 
-  getPriorityAnalytics: () =>
-    apiClient.get<PriorityBreakdown[]>('/analytics/priority'),
+  getPriorityAnalytics: (workspace_id?: string) =>
+    apiClient.get<PriorityBreakdown[]>('/analytics/priority', { params: { workspace_id } }),
 
-  getProductivityHeatmap: () =>
-    apiClient.get<HeatmapData[]>('/analytics/heatmap'),
+  getProductivityHeatmap: (workspace_id?: string) =>
+    apiClient.get<HeatmapData[]>('/analytics/heatmap', { params: { workspace_id } }),
 };
 
 // ================= WORKSPACES =================
 export const workspaceAPI = {
   getAll: () =>
-    apiClient.get('/workspaces'),
+    apiClient.get<Workspace[]>('/workspaces'),
 
   create: (name: string) =>
-    apiClient.post('/workspaces', { name }),
+    apiClient.post<Workspace>('/workspaces', { name }),
 
-  getTasks: (workspaceId: string) =>
-    apiClient.get('/tasks', {
-      params: { workspace_id: workspaceId }
-    }),
+  getById: (id: string) =>
+    apiClient.get<Workspace>(`/workspaces/${id}`),
+
+  // ✅ Fixed: Added delete method to resolve TS2339 error
+  delete: (id: string) =>
+    apiClient.delete(`/workspaces/${id}`),
+
+  getMembers: (workspaceId: string) =>
+    apiClient.get<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`),
 
   invite: (workspaceId: string, email: string) =>
     apiClient.post(`/workspaces/${workspaceId}/invite`, { email }),
+
+  // ✅ Ensured: memberId (User ID) is used to match your backend's delete route
+  removeMember: (workspaceId: string, memberId: string) =>
+    apiClient.delete(`/workspaces/${workspaceId}/members/${memberId}`),
+
+  getActivity: (workspaceId: string) =>
+    apiClient.get<WorkspaceActivity[]>(`/workspaces/${workspaceId}/activity`),
 };

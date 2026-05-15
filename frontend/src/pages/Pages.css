@@ -1,0 +1,212 @@
+/* ──────────────────────────────────────────────────────────
+   Unified Pages Styling (Projects, Tasks, Team, Analytics)
+   ────────────────────────────────────────────────────────── */
+
+.pg__container {
+  padding: 32px;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  color: #0f172a;
+}
+
+.pg__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 32px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 20px;
+}
+
+.pg__title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+  color: #1e293b;
+}
+
+.pg__subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.pg__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Buttons ── */
+.pg__btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0ea5e9;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+.pg__btn-primary:hover { background: #0284c7; }
+
+.pg__btn-outline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pg__btn-outline:hover { background: #f8fafc; }
+
+/* ── Select Dropdown (For Analytics) ── */
+.pg__select {
+  height: 40px;
+  min-width: 200px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ── Grids & Cards ── */
+.pg__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.proj-card, .team-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  transition: transform 0.2s;
+}
+.proj-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.05); }
+
+.proj-card__top, .team-card__top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.proj-card__icon {
+  width: 48px; height: 48px;
+  background: #f0f9ff; color: #0ea5e9;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.proj-card__info h3, .team-card__info h3 { margin: 0 0 6px 0; font-size: 16px; font-weight: 600; }
+.proj-card__bottom { border-top: 1px solid #f1f5f9; padding-top: 16px; font-size: 13px; color: #64748b;}
+
+/* ── Tables ── */
+.table-container {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.task-table { width: 100%; border-collapse: collapse; text-align: left; }
+.task-table th {
+  padding: 16px 20px; font-size: 11px; font-weight: 700;
+  color: #64748b; text-transform: uppercase;
+  border-bottom: 1px solid #e2e8f0; background: #f8fafc;
+}
+.task-table td { padding: 16px 20px; font-size: 13.5px; border-bottom: 1px solid #f1f5f9; }
+.fw-600 { font-weight: 600; color: #0f172a; }
+.text-muted { color: #64748b; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+
+/* ── Badges & Status ── */
+.badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.badge-active { background: #dcfce7; color: #166534; }
+.badge-low { background: #dcfce7; color: #166534; }
+.badge-medium { background: #fef3c7; color: #d97706; }
+.badge-high { background: #fee2e2; color: #991b1b; }
+
+.badge-status { padding: 4px 10px; border-radius: 6px; font-size: 12px; }
+.badge-status.todo { background: #f1f5f9; color: #475569; }
+.badge-status.in-progress { background: #eff6ff; color: #0ea5e9; }
+.badge-status.completed { background: #dcfce7; color: #166534; }
+
+.icon-btn { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 6px; border-radius: 6px; }
+.icon-btn:hover { background: #f1f5f9; color: #0f172a; }
+
+/* ── Modals ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(15,23,42,0.4);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal-content {
+  background: #fff; width: 500px; max-width: 90vw;
+  border-radius: 16px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.modal-header h2 { margin: 0; font-size: 18px; color: #0f172a; }
+
+.input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.input-group label { font-size: 13px; font-weight: 600; color: #334155; }
+.input-group input, .input-group select, .input-group textarea {
+  padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; font-family: inherit;
+}
+.input-group input:focus, .input-group select:focus, .input-group textarea:focus { border-color: #0ea5e9; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.btn-cancel { background: #f1f5f9; color: #475569; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.btn-submit { background: #0ea5e9; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+
+/* ── Analytics Specific Styling ── */
+.analytics-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card-modern {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.stat-card-modern .icon-box {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-card-modern .info h3 { margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: #0f172a; }
+.stat-card-modern .info p.title { margin: 0; font-size: 13px; font-weight: 600; color: #334155; }
+.stat-card-modern .info p.sub { margin: 4px 0 0 0; font-size: 11px; color: #94a3b8; }
+
+/* Responsive break for the 5 columns */
+@media (max-width: 1200px) {
+  .analytics-stats-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .analytics-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}

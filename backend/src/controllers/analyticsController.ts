@@ -8,8 +8,10 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const stats = await TaskModel.getStats(req.user.userId);
-    const completionRate = stats.total > 0 ? (stats.completed / stats.total * 100).toFixed(2) : 0;
+    const workspaceId = req.query.workspace_id as string | undefined;
+    const stats = await TaskModel.getStats(req.user.userId, workspaceId);
+    const completionRate =
+      stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(2) : 0;
 
     res.json({
       totalTasks: parseInt(stats.total),
@@ -31,7 +33,8 @@ export const getPriorityAnalytics = async (req: Request, res: Response): Promise
       return;
     }
 
-    const breakdown = await TaskModel.getPriorityBreakdown(req.user.userId);
+    const workspaceId = req.query.workspace_id as string | undefined;
+    const breakdown = await TaskModel.getPriorityBreakdown(req.user.userId, workspaceId);
     const data = breakdown.map((item) => ({
       name: item.priority,
       value: parseInt(item.count),
@@ -51,7 +54,8 @@ export const getProductivityHeatmap = async (req: Request, res: Response): Promi
       return;
     }
 
-    const heatmapData = await TaskModel.getCompletionHeatmap(req.user.userId);
+    const workspaceId = req.query.workspace_id as string | undefined;
+    const heatmapData = await TaskModel.getCompletionHeatmap(req.user.userId, workspaceId);
     res.json(heatmapData);
   } catch (error) {
     console.error('Get productivity heatmap error:', error);

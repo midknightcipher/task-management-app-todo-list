@@ -11,6 +11,10 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import ProjectsPage from './pages/ProjectsPage';   // New Import
+import AllTasksPage from './pages/AllTasksPage';   // New Import
+import MyTasksPage from './pages/MyTasksPage';     // New Import
+import TeamPage from './pages/TeamPage';           // New Import
 import { authService } from './services/auth';
 import './App.css';
 
@@ -19,6 +23,26 @@ const IconGrid = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
     <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+  </svg>
+);
+const IconProjects = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+  </svg>
+);
+const IconCheckSquare = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+  </svg>
+);
+const IconUser = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+  </svg>
+);
+const IconUsers = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
   </svg>
 );
 const IconChart = () => (
@@ -40,11 +64,6 @@ const IconMenu = () => (
 const IconX = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
-const IconUser = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
   </svg>
 );
 
@@ -73,12 +92,15 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void; onNavClick?:
 
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: <IconGrid /> },
-    { to: '/analytics', label: 'Analytics',  icon: <IconChart /> },
+    { to: '/projects',  label: 'Projects',  icon: <IconProjects /> },
+    { to: '/all-tasks', label: 'All Tasks', icon: <IconCheckSquare /> },
+    { to: '/my-tasks',  label: 'My Tasks',  icon: <IconUser /> },
+    { to: '/team',      label: 'Team',      icon: <IconUsers /> },
+    { to: '/analytics', label: 'Analytics', icon: <IconChart /> },
   ];
 
   return (
     <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
-      {/* Header */}
       <div className="sidebar__header">
         <div className="sidebar__brand">
           <LogoMark />
@@ -89,7 +111,6 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void; onNavClick?:
         </button>
       </div>
 
-      {/* Nav */}
       <nav className="sidebar__nav">
         {!collapsed && <span className="sidebar__section-label">Navigation</span>}
         {navItems.map(({ to, label, icon }) => (
@@ -105,7 +126,6 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void; onNavClick?:
         ))}
       </nav>
 
-      {/* Footer */}
       <div className="sidebar__footer">
         <div className="sidebar__user">
           <div className="sidebar__avatar">{initials}</div>
@@ -134,7 +154,6 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // On resize, auto-collapse when shrinking below 768px
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth < 768) {
@@ -160,7 +179,6 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className={`shell${collapsed && !mobileOpen ? ' shell--collapsed' : ''}`}>
-      {/* Mobile overlay */}
       {mobileOpen && <div className="sidebar-overlay" onClick={closeMobile} />}
       <Sidebar
         collapsed={collapsed && !mobileOpen}
@@ -189,12 +207,15 @@ export const App: React.FC = () => {
       <Routes>
         <Route path="/login"  element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/dashboard" element={
-          <ProtectedRoute><AppShell><DashboardPage /></AppShell></ProtectedRoute>
-        }/>
-        <Route path="/analytics" element={
-          <ProtectedRoute><AppShell><AnalyticsPage /></AppShell></ProtectedRoute>
-        }/>
+        
+        {/* Pages */}
+        <Route path="/dashboard" element={<ProtectedRoute><AppShell><DashboardPage /></AppShell></ProtectedRoute>} />
+        <Route path="/projects"  element={<ProtectedRoute><AppShell><ProjectsPage /></AppShell></ProtectedRoute>} />
+        <Route path="/all-tasks" element={<ProtectedRoute><AppShell><AllTasksPage /></AppShell></ProtectedRoute>} />
+        <Route path="/my-tasks"  element={<ProtectedRoute><AppShell><MyTasksPage /></AppShell></ProtectedRoute>} />
+        <Route path="/team"      element={<ProtectedRoute><AppShell><TeamPage /></AppShell></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute><AppShell><AnalyticsPage /></AppShell></ProtectedRoute>} />
+        
         <Route path="/" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
