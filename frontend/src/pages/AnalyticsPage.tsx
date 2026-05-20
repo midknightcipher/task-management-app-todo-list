@@ -11,6 +11,12 @@ const IconClock = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="no
 const IconAlert = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
 const IconPercent = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>;
 
+// Strict TypeScript Interfaces
+interface HeatmapData {
+  date: string;
+  completed_count: number | string;
+}
+
 export const AnalyticsPage: React.FC = () => {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>('personal'); 
@@ -18,6 +24,7 @@ export const AnalyticsPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [priorityData, setPriorityData] = useState<PriorityBreakdown[]>([]);
   const [weeklyData, setWeeklyData] = useState<any[]>([]); 
+  const [rawHeatmap, setRawHeatmap] = useState<HeatmapData[]>([]); 
   const [loading, setLoading] = useState(true);
 
   // Fetch workspaces for the toggle dropdown
@@ -39,6 +46,7 @@ export const AnalyticsPage: React.FC = () => {
       
       setStats(statsRes.data);
       setPriorityData(priorityRes.data);
+      setRawHeatmap(heatmapRes.data || []); // Store raw data for the dynamic heatmap
 
       const last7Days = Array.from({length: 7}, (_, i) => {
         const d = new Date();
@@ -49,7 +57,7 @@ export const AnalyticsPage: React.FC = () => {
       const formattedWeeklyData = last7Days.map(date => {
         const dateStr = date.toISOString().split('T')[0];
         const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-        const found = (heatmapRes.data || []).find((h: any) => h.date.startsWith(dateStr));
+        const found = (heatmapRes.data || []).find((h: HeatmapData) => h.date.startsWith(dateStr));
         
         return {
           day: dayName,
@@ -78,7 +86,13 @@ export const AnalyticsPage: React.FC = () => {
     return '#0ea5e9';
   };
 
-  // ✅ Build Pie Data safely, filtering out 0s to prevent overlapping labels
+  const getHeatmapColor = (count: number) => {
+    if (count === 0) return '#f8fafc'; // Empty (Light Gray)
+    if (count <= 1) return '#dcfce7';  // Light Green
+    if (count <= 3) return '#4ade80';  // Medium Green
+    return '#16a34a';                  // Dark Green
+  };
+
   const pieData = stats ? [
     { name: 'Completed', value: stats.completedTasks, color: '#10b981' }, 
     { name: 'Pending', value: stats.pendingTasks, color: '#f59e0b' },
@@ -148,7 +162,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Charts Row 1 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' }}>
+          <div className="analytics-chart-row-1">
             <div className="proj-card">
               <h3 style={{marginBottom: '6px', fontSize: '16px'}}>Weekly Activity</h3>
               <p className="text-muted" style={{marginBottom: '20px'}}>Tasks created vs completed — current week</p>
@@ -173,10 +187,12 @@ export const AnalyticsPage: React.FC = () => {
               <div style={{ width: '100%', height: '250px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    {/* ✅ Restored the percentage labels and custom styling */}
                     <Pie 
                       data={pieData} 
-                      innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
+                      innerRadius={40} 
+                      outerRadius={60} 
+                      paddingAngle={2} 
+                      dataKey="value"
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
                     >
@@ -192,7 +208,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Charts Row 2 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
+          <div className="analytics-chart-row-2">
              <div className="proj-card">
               <h3 style={{marginBottom: '6px', fontSize: '16px'}}>Priority Breakdown</h3>
               <p className="text-muted" style={{marginBottom: '20px'}}>Tasks grouped by priority level</p>
@@ -215,7 +231,7 @@ export const AnalyticsPage: React.FC = () => {
             <div className="proj-card">
               <h3 style={{marginBottom: '6px', fontSize: '16px'}}>Productivity Insights</h3>
               <p className="text-muted" style={{marginBottom: '20px'}}>Deadline adherence and completion trends</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+              <div className="analytics-insights-grid">
                   
                   <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', borderTop: '4px solid #ef4444' }}>
                       <div style={{color: '#ef4444', marginBottom: '8px'}}><IconAlert /></div>
@@ -244,10 +260,65 @@ export const AnalyticsPage: React.FC = () => {
                       <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>Weekly Trend</p>
                       <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#94a3b8' }}>Up from 0 last week</p>
                   </div>
-
               </div>
             </div>
           </div>
+
+          {/* Row 3: Activity Heatmap (Current Month) */}
+          <div className="proj-card" style={{ marginTop: '24px' }}>
+             <h3 style={{marginBottom: '6px', fontSize: '16px'}}>Activity Heatmap</h3>
+             <p className="text-muted" style={{marginBottom: '16px'}}>Daily task completions for the current month</p>
+             
+             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {(() => {
+                   // Dynamically calculate the exact days in the current month
+                   const today = new Date();
+                   const currentYear = today.getFullYear();
+                   const currentMonth = today.getMonth();
+                   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+                   const monthDays = Array.from({ length: daysInMonth }, (_, i) => {
+                     const yyyy = currentYear;
+                     const mm = String(currentMonth + 1).padStart(2, '0');
+                     const dd = String(i + 1).padStart(2, '0');
+                     return `${yyyy}-${mm}-${dd}`;
+                   });
+
+                   return monthDays.map(dateStr => {
+                     const dayData = rawHeatmap.find(h => h.date.startsWith(dateStr));
+                     const count = dayData ? Number(dayData.completed_count) : 0;
+                     const dayNumber = dateStr.split('-')[2]; // Extracts '01', '15', etc.
+
+                     return (
+                       <div 
+                          key={dateStr}
+                          title={`${count} tasks completed on ${dateStr}`}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '6px',
+                            backgroundColor: getHeatmapColor(count),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: count > 0 ? '#166534' : '#94a3b8',
+                            border: '1px solid #e2e8f0',
+                            cursor: 'pointer',
+                            transition: 'transform 0.1s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                       >
+                         {dayNumber}
+                       </div>
+                     );
+                   });
+                })()}
+             </div>
+          </div>
+
         </>
       )}
     </div>

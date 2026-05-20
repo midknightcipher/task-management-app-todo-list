@@ -159,6 +159,8 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       if (window.innerWidth < 768) {
         setCollapsed(true);
         setMobileOpen(false);
+      } else {
+        setCollapsed(false); // Restores layout structure when screen scales back to desktop
       }
     };
     window.addEventListener('resize', onResize);
@@ -180,12 +182,24 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className={`shell${collapsed && !mobileOpen ? ' shell--collapsed' : ''}`}>
       {mobileOpen && <div className="sidebar-overlay" onClick={closeMobile} />}
+      
       <Sidebar
-        collapsed={collapsed && !mobileOpen}
+        collapsed={collapsed && !mobileOpen && !isMobile()} // Prevents icon-only minimization behavior on mobile viewports
         onToggle={handleToggle}
         onNavClick={() => { if (isMobile()) setMobileOpen(false); }}
       />
+      
       <main className="shell__main">
+        {/* Floating header navbar overlay that populates exclusively on mobile devices */}
+        {isMobile() && (
+          <div style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid var(--border)', background: '#fff' }}>
+             <button onClick={handleToggle} style={{ background: 'none', border: 'none', marginRight: '16px', display: 'flex', alignItems: 'center' }}>
+                <IconMenu />
+             </button>
+             <span style={{ fontWeight: 700, fontSize: '16px', fontFamily: "'Outfit', sans-serif" }}>TaskPilot</span>
+          </div>
+        )}
+        
         <div className="shell__content">{children}</div>
       </main>
     </div>

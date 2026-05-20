@@ -313,27 +313,43 @@ input, select, textarea { font-family: inherit; }
 
 /* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .shell__content { padding: 20px 16px 32px; }
+  /* Reduce side padding on mobile screens so content doesn't look squished */
+  .shell__content { 
+    padding: 20px 16px 32px; 
+  }
 
+  /* Reset main content margin so it takes full width on mobile */
+  .shell__main {
+    margin-left: 0 !important;
+  }
+
+  /* Reposition the sidebar into a hidden off-screen drawer on mobile */
   .sidebar {
     position: fixed;
     left: 0;
     top: 0;
     height: 100vh;
     z-index: 100;
-    width: var(--sb-collapsed) !important;
-    min-width: var(--sb-collapsed) !important;
-  }
-
-  /* Open state: sidebar slides in full-width */
-  .shell:not(.shell--collapsed) .sidebar {
+    
+    /* Pushes the sidebar completely out of view to the left */
+    transform: translateX(-100%);
     width: var(--sb-width) !important;
     min-width: var(--sb-width) !important;
+    transition: transform var(--t-mid) var(--ease);
   }
 
-  /* Offset main so it's never hidden behind the icon strip */
-  .shell__main {
-    margin-left: var(--sb-collapsed);
+  /* When mobileOpen is active, this slides the sidebar menu into view */
+  .shell:not(.shell--collapsed) .sidebar {
+    transform: translateX(0);
+  }
+
+  /* Forces text labels to remain visible on mobile when the menu opens */
+  .sidebar__brand-name,
+  .sidebar__section-label,
+  .sidebar__link-label,
+  .sidebar__user-info,
+  .sidebar__logout span {
+    display: block !important;
   }
 }
 
@@ -343,6 +359,7 @@ input, select, textarea { font-family: inherit; }
 }
 
 @media (max-width: 768px) {
+  /* Dark backdrop overlay when the sidebar menu is open on mobile */
   .sidebar-overlay {
     display: block;
     position: fixed;

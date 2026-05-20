@@ -3,7 +3,7 @@ import Joi from 'joi';
 
 export const validateRequest = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    console.log('REQ BODY:', req.body);
+    //console.log('REQ BODY:', req.body);
 
     const { error, value } = schema.validate(req.body, {
       abortEarly: false,

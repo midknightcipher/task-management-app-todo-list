@@ -113,7 +113,7 @@ const DashboardPage: React.FC = () => {
                   rows={3} 
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="db__form-row-3">
                 <div className="input-group">
                   <label>Priority</label>
                   <select value={priority} onChange={e => setPriority(e.target.value as any)}>
@@ -125,7 +125,7 @@ const DashboardPage: React.FC = () => {
                   <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="db__form-row-3">
                 <div className="input-group">
                   <label>Project / Location</label>
                   <select value={workspaceId} onChange={e => setWorkspaceId(e.target.value)}>
