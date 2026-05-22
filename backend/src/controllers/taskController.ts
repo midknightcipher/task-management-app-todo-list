@@ -26,7 +26,7 @@ const assertTaskAccess = async (taskId: string, userId: string): Promise<any | n
   return rows.length > 0 ? task : false;
 };
 
-// CREATE TASK
+// CREATE TASK - UPDATED SECURITY LOGIC
 export const createTask = async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
     if (!req.user) { res.status(401).json({ error: 'Unauthorized' }); return; }
@@ -39,13 +39,15 @@ export const createTask = async (req: RequestWithUser, res: Response): Promise<v
     }
 
     if (workspace_id) {
+      // UPDATED: Check for specific roles 'owner' or 'admin'
       const { rows } = await pool.query(
-        `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+        `SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
         [workspace_id, req.user.userId]
       );
 
-      if (rows.length === 0) {
-        res.status(403).json({ error: 'Not a member of this workspace' });
+      // If no membership found or role is just 'member', forbid the action
+      if (rows.length === 0 || !['owner', 'admin'].includes(rows[0].role)) {
+        res.status(403).json({ error: 'You do not have permission to create tasks in this workspace' });
         return;
       }
     }

@@ -1,35 +1,29 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
+  Tooltip, Legend, ResponsiveContainer, Cell,
 } from 'recharts';
-import { DashboardStats, PriorityBreakdown, HeatmapData, Task } from '../../types';
-import { analyticsAPI, tasksAPI } from '../../services/api';
+import { DashboardStats, HeatmapData, Task, TeamIntelligence, PipelineHealth, Workspace } from '../../types';
+import { analyticsAPI, tasksAPI, workspaceAPI } from '../../services/api';
 import '../styles/Dashboard.css';
 
 /* ── Icons ─────────────────────────────────────────────────── */
 const Icons = {
   layers:    () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
   check:     () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-  clock:     () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  users:     () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
   alert:     () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   percent:   () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>,
-  target:    () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
   timer:     () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-  trendUp:   () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
-  trendDown: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
+  activity:  () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
+  database:  () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>,
+  heart:     () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   DATA DERIVATION — deterministic, no randomness
-   ═══════════════════════════════════════════════════════════════ */
-
-/**
- * Groups tasks by which day of the CURRENT week they were created/completed.
- */
+/* ── Legacy function (kept for the Weekly Line Chart) ──────── */
 function deriveWeeklyData(tasks: Task[]) {
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon…6=Sat
+  const dayOfWeek = today.getDay();
   const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
 
   const weekStart = new Date(today);
@@ -42,90 +36,15 @@ function deriveWeeklyData(tasks: Task[]) {
     const dayEnd = new Date(dayStart);
     dayEnd.setDate(dayStart.getDate() + 1);
 
-    const created = tasks.filter(t => {
-      const d = new Date(t.created_at);
-      return d >= dayStart && d < dayEnd;
-    }).length;
-
-    const completed = tasks.filter(t => {
-      if (!t.completed_at) return false;
-      const d = new Date(t.completed_at);
-      return d >= dayStart && d < dayEnd;
-    }).length;
+    const created = tasks.filter(t => new Date(t.created_at) >= dayStart && new Date(t.created_at) < dayEnd).length;
+    const completed = tasks.filter(t => t.completed_at && new Date(t.completed_at) >= dayStart && new Date(t.completed_at) < dayEnd).length;
 
     return { day, created, completed };
   });
 }
 
-/**
- * Derives real productivity metrics from task data.
- */
-function deriveProductivityInsights(tasks: Task[]) {
-  const now = new Date();
-
-  const completedWithDue = tasks.filter(
-    t => t.status === 'Completed' && t.completed_at && t.due_date
-  );
-  const completedOnTime = completedWithDue.filter(
-    t => new Date(t.completed_at!) <= new Date(t.due_date!)
-  );
-
-  
-  // Correct denominator = completed-with-due + overdue-incomplete (all "accountable" tasks).
-  const overdueIncomplete = tasks.filter(
-    t => t.due_date && t.status !== 'Completed' && new Date(t.due_date) < now
-  );
-  const accountable = completedWithDue.length + overdueIncomplete.length;
-  const onTimeRate =
-    accountable > 0
-      ? Math.round((completedOnTime.length / accountable) * 100)
-      : null;
-
-  const overdueCount = tasks.filter(
-    t => t.due_date && t.status !== 'Completed' && new Date(t.due_date) < now
-  ).length;
-
-  const completedTasks = tasks.filter(t => t.status === 'Completed' && t.completed_at);
-  const avgDays =
-    completedTasks.length > 0
-      ? Math.round(
-          completedTasks.reduce((sum, t) => {
-            const ms =
-              new Date(t.completed_at!).getTime() - new Date(t.created_at).getTime();
-            return sum + ms / 86_400_000;
-          }, 0) / completedTasks.length
-        )
-      : null;
-
-  const weekAgo     = new Date(now); weekAgo.setDate(now.getDate() - 7);
-  const twoWeeksAgo = new Date(now); twoWeeksAgo.setDate(now.getDate() - 14);
-
-  const thisWeekDone = completedTasks.filter(
-    t => new Date(t.completed_at!) >= weekAgo
-  ).length;
-  const lastWeekDone = completedTasks.filter(t => {
-    const d = new Date(t.completed_at!);
-    return d >= twoWeeksAgo && d < weekAgo;
-  }).length;
-
-  const trend: 'improving' | 'declining' | 'stable' | 'no data' =
-    lastWeekDone === 0 && thisWeekDone === 0 ? 'no data'
-    : lastWeekDone === 0                     ? 'improving'
-    : thisWeekDone > lastWeekDone            ? 'improving'
-    : thisWeekDone < lastWeekDone            ? 'declining'
-    : 'stable';
-
-  return { onTimeRate, overdueCount, avgDays, trend, thisWeekDone, lastWeekDone };
-}
-
 /* ── Shared UI components ───────────────────────────────────── */
-
-const StatCard = ({
-  label, value, icon, accent, sub,
-}: {
-  label: string; value: string | number;
-  icon: React.ReactNode; accent: string; sub?: string;
-}) => (
+const StatCard = ({ label, value, icon, accent, sub }: any) => (
   <div className="an-stat">
     <div className="an-stat__icon" style={{ color: accent, background: `${accent}18` }}>{icon}</div>
     <div className="an-stat__content">
@@ -137,11 +56,7 @@ const StatCard = ({
   </div>
 );
 
-const ChartCard = ({
-  title, sub, children,
-}: {
-  title: string; sub?: string; children: React.ReactNode;
-}) => (
+const ChartCard = ({ title, sub, children }: any) => (
   <div className="an-chart">
     <div className="an-chart__header">
       <h3 className="an-chart__title">{title}</h3>
@@ -154,14 +69,10 @@ const ChartCard = ({
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
-      padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-      fontFamily: 'IBM Plex Sans, sans-serif', fontSize: 13,
-    }}>
+    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: 13 }}>
       <p style={{ color: '#64748b', marginBottom: 6, fontWeight: 500 }}>{label}</p>
       {payload.map((p: any, i: number) => (
-        <p key={i} style={{ color: p.color, margin: '2px 0' }}>
+        <p key={i} style={{ color: p.color || p.fill, margin: '2px 0' }}>
           {p.name}: <strong>{p.value}</strong>
         </p>
       ))}
@@ -169,138 +80,40 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-/* ── Productivity Insights panel ────────────────────────────── */
-const ProductivityInsights = ({ tasks }: { tasks: Task[] }) => {
-  const ins = useMemo(() => deriveProductivityInsights(tasks), [tasks]);
-
-  const trendColor =
-    ins.trend === 'improving' ? '#059669'
-    : ins.trend === 'declining' ? '#dc2626'
-    : '#d97706';
-
-  const trendSub =
-    ins.trend === 'improving'  ? `↑ Up from ${ins.lastWeekDone} last week`
-    : ins.trend === 'declining' ? `↓ Down from ${ins.lastWeekDone} last week`
-    : ins.trend === 'stable'    ? `→ Same as last week (${ins.lastWeekDone})`
-    : 'Complete tasks to see trend';
-
-  const cards = [
-    {
-      icon: <Icons.target />,
-      label: 'On-Time Rate',
-      value: ins.onTimeRate !== null ? `${ins.onTimeRate}%` : '—',
-      sub:
-        ins.onTimeRate === null ? 'Add due dates to tasks to track this'
-        : ins.onTimeRate >= 80  ? 'Tasks finished before deadline'
-        : ins.onTimeRate >= 50  ? 'Room to improve on deadlines'
-        : 'Many tasks missed their deadline',
-      accent:
-        ins.onTimeRate === null ? '#94a3b8'
-        : ins.onTimeRate >= 80  ? '#059669'
-        : ins.onTimeRate >= 50  ? '#d97706'
-        : '#dc2626',
-    },
-    {
-      icon: <Icons.alert />,
-      label: 'Currently Overdue',
-      value: ins.overdueCount === 0 ? 'None' : String(ins.overdueCount),
-      sub:
-        ins.overdueCount === 0
-          ? 'All tasks with due dates on track'
-          : `${ins.overdueCount} task${ins.overdueCount > 1 ? 's' : ''} past due date`,
-      accent: ins.overdueCount === 0 ? '#059669' : '#dc2626',
-    },
-    {
-      icon: <Icons.timer />,
-      label: 'Avg Completion Time',
-      value: ins.avgDays !== null ? `${ins.avgDays} day${ins.avgDays !== 1 ? 's' : ''}` : '—',
-      sub: ins.avgDays !== null ? 'Average from creation to done' : 'Complete tasks to see this',
-      accent: '#6366f1',
-    },
-    {
-      icon: ins.trend === 'declining' ? <Icons.trendDown /> : <Icons.trendUp />,
-      label: 'Weekly Trend',
-      value: `${ins.thisWeekDone} done`,
-      sub: trendSub,
-      accent: trendColor,
-    },
-  ];
-
-  return (
-    <div className="an__productivity">
-      {cards.map((c, i) => (
-        <div key={i} className="an-pi-card" style={{ borderTopColor: c.accent }}>
-          <div className="an-pi-card__icon" style={{ color: c.accent, background: `${c.accent}12` }}>
-            {c.icon}
-          </div>
-          <div className="an-pi-card__value" style={{ color: c.accent }}>{c.value}</div>
-          <div className="an-pi-card__label">{c.label}</div>
-          <div className="an-pi-card__sub">{c.sub}</div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-/* ── Heatmap ────────────────────────────────────────────────── */
-const HeatmapSection = () => {
-  const [data, setData]       = useState<HeatmapData[]>([]);
+/* ── Heatmap Component (Kept exactly as requested) ──────────── */
+const HeatmapSection = ({ workspaceId }: { workspaceId: string }) => {
+  const [data, setData] = useState<HeatmapData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    analyticsAPI.getProductivityHeatmap()
+    analyticsAPI.getProductivityHeatmap(workspaceId || undefined)
       .then(r => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [workspaceId]);
 
-  // 35 days = 5 rows × 7 cols (GitHub-style)
-  const last35 = useMemo(() =>
-    Array.from({ length: 35 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (34 - i));
-      return d.toISOString().split('T')[0];
-    }), []
-  );
+  const last35 = useMemo(() => Array.from({ length: 35 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (34 - i));
+    return d.toISOString().split('T')[0];
+  }), []);
 
-  const countMap = useMemo(
-    () => new Map(data.map(d => [d.date.split('T')[0], d.completed_count])),
-    [data]
-  );
+  const countMap = useMemo(() => new Map(data.map(d => [d.date.split('T')[0], d.completed_count])), [data]);
+  const getLevel = (n: number) => n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 5 ? 3 : 4;
 
-  // Tighter intensity — 1 task = level 1, not lumped with 2
-  const getLevel = (n: number) =>
-    n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 5 ? 3 : 4;
-
-  if (loading) return (
-    <ChartCard title="30-Day Activity" sub="Tasks completed per day">
-      <div className="an-loading-sm"><div className="an-spinner" /></div>
-    </ChartCard>
-  );
+  if (loading) return <ChartCard title="30-Day Activity" sub="Tasks completed per day"><div className="an-loading-sm"><div className="an-spinner" /></div></ChartCard>;
 
   return (
     <ChartCard title="30-Day Activity" sub="Tasks completed per day">
-      {/* FIX: was repeat(10, 1fr) — 1fr stretches cells. Now fixed 14px per cell. */}
       <div className="an-heatmap">
         {last35.map(date => {
           const count = countMap.get(date) || 0;
-          const label = new Date(date + 'T00:00:00').toLocaleDateString('en-IN', {
-            day: 'numeric', month: 'short',
-          });
-          return (
-            <div
-              key={date}
-              className={`an-heatmap__cell an-heatmap__cell--${getLevel(count)}`}
-              title={`${label}: ${count} task${count !== 1 ? 's' : ''} completed`}
-            />
-          );
+          return <div key={date} className={`an-heatmap__cell an-heatmap__cell--${getLevel(count)}`} title={`${date}: ${count} completed`} />;
         })}
       </div>
       <div className="an-heatmap__legend">
         <span className="an-heatmap__legend-text">Less</span>
-        {[0, 1, 2, 3, 4].map(l => (
-          <div key={l} className={`an-heatmap__cell an-heatmap__cell--${l} an-heatmap__cell--sm`} />
-        ))}
+        {[0, 1, 2, 3, 4].map(l => <div key={l} className={`an-heatmap__cell an-heatmap__cell--${l} an-heatmap__cell--sm`} />)}
         <span className="an-heatmap__legend-text">More</span>
       </div>
     </ChartCard>
@@ -308,75 +121,87 @@ const HeatmapSection = () => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN COMPONENT
+   MAIN ANALYTICS DASHBOARD
    ═══════════════════════════════════════════════════════════════ */
 export const Dashboard: React.FC = () => {
-  const [stats, setStats]       = useState<DashboardStats | null>(null);
-  const [priority, setPriority] = useState<PriorityBreakdown[]>([]);
-  const [tasks, setTasks]       = useState<Task[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
+  // UI State
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string>('');
+  
+  // Data State
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [intelligence, setIntelligence] = useState<TeamIntelligence>({ leaderboard: [], workload: [] });
+  const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Polling logic for Near Real-Time feel
   useEffect(() => {
-    Promise.all([
-      analyticsAPI.getDashboardStats(),
-      analyticsAPI.getPriorityAnalytics(),
-      tasksAPI.getAll(),           // needed for weekly chart + productivity insights
-    ])
-      .then(([statsRes, prioRes, tasksRes]) => {
+    const fetchData = () => {
+      const wsParam = selectedWorkspace || undefined;
+      Promise.all([
+        analyticsAPI.getDashboardStats(wsParam),
+        analyticsAPI.getTeamIntelligence(wsParam),
+        analyticsAPI.getPipelineHealth(),
+        workspaceAPI.getAll(),
+        tasksAPI.getAll(undefined, undefined, wsParam)
+      ]).then(([statsRes, intelRes, pipeRes, wsRes, tasksRes]) => {
         setStats(statsRes.data);
-        setPriority(prioRes.data);
+        setIntelligence(intelRes.data);
+        setPipelineHealth(pipeRes.data);
+        setWorkspaces(wsRes.data || []);
         setTasks(tasksRes.data || []);
-      })
-      .catch(err => {
-        setError(err.response?.data?.error || 'Failed to load analytics');
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      }).finally(() => setLoading(false));
+    };
 
-  // useMemo — only recalculates when tasks array reference changes
+    fetchData();
+    // Poll the fast ETL endpoints every 30 seconds
+    const interval = setInterval(fetchData, 30000); 
+    return () => clearInterval(interval);
+  }, [selectedWorkspace]);
+
   const weeklyData = useMemo(() => deriveWeeklyData(tasks), [tasks]);
 
-  const pieData = useMemo(() =>
-    stats
-      ? [
-          { name: 'Completed', value: stats.completedTasks, color: '#10b981' },
-          { name: 'Pending',   value: stats.pendingTasks,   color: '#f59e0b' },
-          { name: 'Overdue',   value: stats.overdueTasks,   color: '#ef4444' },
-        ].filter(d => d.value > 0)
-      : [],
-  [stats]);
-
-  const PRIORITY_COLORS: Record<string, string> = {
-    High: '#ef4444', Medium: '#f59e0b', Low: '#10b981',
-  };
-
-  if (loading) return (
-    <div className="an-loading">
-      <div className="an-spinner" />
-      <p>Loading analytics…</p>
-    </div>
-  );
-  if (error)  return <div className="an-error">{error}</div>;
-  if (!stats) return null;
-
-  const completionRate = stats.completionRate || 0;
+  if (loading && !stats) return <div className="an-loading"><div className="an-spinner" /><p>Loading ETL Analytics…</p></div>;
+  if (!stats) return <div className="an-error">Failed to load analytics</div>;
 
   return (
     <div className="an">
-
-      {/* Stat row */}
-      <div className="an__stats">
-        <StatCard label="Total Tasks"     value={stats.totalTasks}     icon={<Icons.layers />}  accent="#0ea5e9" sub="All tracked tasks" />
-        <StatCard label="Completed"       value={stats.completedTasks} icon={<Icons.check />}   accent="#10b981" sub={`${completionRate}% rate`} />
-        <StatCard label="Pending"         value={stats.pendingTasks}   icon={<Icons.clock />}   accent="#f59e0b" />
-        <StatCard label="Overdue"         value={stats.overdueTasks}   icon={<Icons.alert />}   accent="#ef4444" sub={stats.overdueTasks > 0 ? 'Need attention' : 'All on track'} />
-        <StatCard label="Completion Rate" value={`${completionRate}%`} icon={<Icons.percent />} accent="#6366f1" sub={`${stats.completedTasks} of ${stats.totalTasks} done`} />
+      {/* Scope Selector */}
+      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <h2 style={{ fontSize: '18px', margin: 0 }}>Analytics Scope:</h2>
+        <select 
+          value={selectedWorkspace} 
+          onChange={(e) => setSelectedWorkspace(e.target.value)}
+          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+        >
+          <option value="">Personal Data</option>
+          {workspaces.map(ws => <option key={ws.id} value={ws.id}>{ws.name} Team</option>)}
+        </select>
       </div>
 
-      {/* Row 1: Weekly Activity + Task Distribution */}
+      {/* TOP SECTION: KPI Cards (Driven strictly by the ETL payload) */}
+      <div className="an__stats">
+        {stats.mode === 'personal' ? (
+          <>
+            <StatCard label="Tasks Completed" value={stats.tasksCompleted} icon={<Icons.check />} accent="#10b981" sub={`Out of ${stats.tasksCreated} created`} />
+            <StatCard label="Completion Rate" value={`${stats.completionRate}%`} icon={<Icons.percent />} accent="#0ea5e9" />
+            <StatCard label="Productivity Score" value={stats.productivityScore} icon={<Icons.activity />} accent="#8b5cf6" sub="Calculated via ETL" />
+            <StatCard label="Overdue Tasks" value={stats.overdueTasks} icon={<Icons.alert />} accent="#ef4444" />
+          </>
+        ) : (
+          <>
+            <StatCard label="Workspace Health" value={`${stats.healthScore}/100`} icon={<Icons.heart />} accent={stats.healthScore > 80 ? '#10b981' : '#f59e0b'} sub="Based on overdue rates" />
+            <StatCard label="Total Tasks" value={stats.totalTasks} icon={<Icons.layers />} accent="#0ea5e9" sub={`${stats.completedTasks} completed`} />
+            <StatCard label="Active Members" value={stats.activeMembers} icon={<Icons.users />} accent="#8b5cf6" />
+            <StatCard label="Overdue Tasks" value={stats.overdueTasks} icon={<Icons.alert />} accent={stats.overdueTasks > 0 ? '#ef4444' : '#10b981'} />
+          </>
+        )}
+      </div>
+
+      {/* MIDDLE SECTION: Weekly Activity + Team Leaderboard */}
       <div className="an__grid an__grid--2">
-        <ChartCard title="Weekly Activity" sub="Tasks created vs completed — current week">
+        <ChartCard title="Weekly Activity" sub="Operational tasks created vs completed">
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={weeklyData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -385,75 +210,122 @@ export const Dashboard: React.FC = () => {
               <Tooltip content={<CustomTooltip />} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
               <Line type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={2.5} dot={{ fill: '#10b981', r: 4 }} name="Completed" />
-              <Line type="monotone" dataKey="created"   stroke="#0ea5e9" strokeWidth={2.5} dot={{ fill: '#0ea5e9', r: 4 }} name="Created" strokeDasharray="5 3" />
+              <Line type="monotone" dataKey="created" stroke="#0ea5e9" strokeWidth={2.5} dot={{ fill: '#0ea5e9', r: 4 }} name="Created" strokeDasharray="5 3" />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Task Distribution" sub="Breakdown by current status">
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={pieData} cx="50%" cy="50%"
-                outerRadius={88} innerRadius={48}
-                dataKey="value" paddingAngle={3}
-                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
-                  // Render label OUTSIDE the arc but INSIDE the SVG via calculated coords.
-                  // This avoids the overflow:hidden clip that was cutting "Completed" off.
-                  const RADIAN = Math.PI / 180;
-                  const radius = outerRadius + 22;
-                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                  if (percent < 0.06) return null; // skip label if slice too small
-                  return (
-                    <text
-                      x={x} y={y}
-                      fill="#374151"
-                      textAnchor={x > cx ? 'start' : 'end'}
-                      dominantBaseline="central"
-                      style={{ fontSize: 11.5, fontFamily: 'IBM Plex Sans, sans-serif', fontWeight: 500 }}
-                    >
-                      {`${name} ${Math.round(percent * 100)}%`}
-                    </text>
-                  );
-                }}
-                labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}
-              >
-                {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-            </PieChart>
-          </ResponsiveContainer>
+        <ChartCard title="Team Leaderboard" sub="Top contributors by completed tasks (ETL Derived)">
+          {intelligence.leaderboard.length > 0 ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={intelligence.leaderboard.slice(0, 5)} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
+                <XAxis type="number" hide />
+                <YAxis dataKey="email" type="category" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} width={100} tickFormatter={(val: string) => val.split('@')[0]} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="completed_tasks" name="Completed" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={24} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '14px' }}>
+              Select a Workspace to view team rankings.
+            </div>
+          )}
         </ChartCard>
       </div>
 
-      {/* Row 2: Priority Breakdown + Productivity Insights */}
+      {/* LOWER SECTION: Workload Distribution + Productivity Intelligence */}
       <div className="an__grid an__grid--2">
-        <ChartCard title="Priority Breakdown" sub="Tasks grouped by priority level">
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={priority} margin={{ top: 5, right: 10, left: -20, bottom: 0 }} barSize={36}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="value" name="Tasks" radius={[5, 5, 0, 0]}>
-                {priority.map((entry, i) => (
-                  <Cell key={i} fill={PRIORITY_COLORS[entry.name] || '#0ea5e9'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <ChartCard title="Workload Distribution" sub="Pending vs Overdue tasks per member">
+          {intelligence.workload.length > 0 ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={intelligence.workload} margin={{ top: 5, right: 10, left: -20, bottom: 0 }} barSize={32}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="email" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val: string) => val.split('@')[0]} />
+                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
+                <Bar dataKey="pending_tasks" name="Pending" stackId="a" fill="#0ea5e9" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="overdue_tasks" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '14px' }}>
+              Select a Workspace to view workload.
+            </div>
+          )}
         </ChartCard>
 
-        {/* REPLACED redundant "Overdue vs Completed" */}
-        <ChartCard title="Productivity Insights" sub="Deadline adherence and completion trends">
-          <ProductivityInsights tasks={tasks} />
+        {/* Updated Productivity Intelligence using ETL data directly */}
+        <ChartCard title="Productivity Intelligence" sub="Pipeline-calculated performance indicators">
+           <div className="an__productivity" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', height: '100%' }}>
+              {stats.mode === 'personal' ? (
+                <>
+                  <div className="an-pi-card" style={{ borderTopColor: '#8b5cf6', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
+                    <div style={{ color: '#8b5cf6', fontSize: '24px', fontWeight: 600 }}>{stats.productivityScore}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>Overall Score</div>
+                  </div>
+                  <div className="an-pi-card" style={{ borderTopColor: '#ef4444', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
+                    <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: 600 }}>{stats.overdueTasks}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>Overdue Tasks</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="an-pi-card" style={{ borderTopColor: stats.healthScore > 80 ? '#10b981' : '#f59e0b', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
+                    <div style={{ color: stats.healthScore > 80 ? '#10b981' : '#f59e0b', fontSize: '24px', fontWeight: 600 }}>{stats.healthScore}/100</div>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>Team Health</div>
+                  </div>
+                  <div className="an-pi-card" style={{ borderTopColor: '#0ea5e9', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
+                    <div style={{ color: '#0ea5e9', fontSize: '24px', fontWeight: 600 }}>{stats.completedTasks}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>Tasks Shipped</div>
+                  </div>
+                </>
+              )}
+           </div>
         </ChartCard>
       </div>
 
-      {/* Heatmap */}
-      <HeatmapSection />
+      {/* BOTTOM SECTION: Heatmap + Pipeline Infrastructure Widget */}
+      <HeatmapSection workspaceId={selectedWorkspace} />
+
+      {/* NEW: Data Engineering Proof Widget */}
+      {pipelineHealth && (
+        <div style={{
+          marginTop: '32px', background: '#0f172a', color: '#f8fafc', 
+          padding: '16px 24px', borderRadius: '12px', display: 'flex', 
+          justifyContent: 'space-between', alignItems: 'center',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ color: '#38bdf8' }}><Icons.database /></div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, letterSpacing: '0.5px' }}>ANALYTICS ETL PIPELINE</h4>
+              <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Powered by Python Background Worker</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '32px', textAlign: 'right' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Status</div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: pipelineHealth.status === 'success' ? '#34d399' : '#f87171', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: pipelineHealth.status === 'success' ? '#34d399' : '#f87171' }} />
+                {pipelineHealth.status.toUpperCase()}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Rows Processed</div>
+              <div style={{ fontSize: '14px', fontWeight: 600 }}>{pipelineHealth.rows_processed}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Last Sync</div>
+              <div style={{ fontSize: '14px', fontWeight: 600 }}>
+                {pipelineHealth.run_end ? new Date(pipelineHealth.run_end).toLocaleTimeString() : 'Waiting...'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

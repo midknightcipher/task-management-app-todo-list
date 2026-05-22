@@ -130,7 +130,10 @@ const DashboardPage: React.FC = () => {
                   <label>Project / Location</label>
                   <select value={workspaceId} onChange={e => setWorkspaceId(e.target.value)}>
                     <option value="">🔒 Personal Task (Private)</option>
-                    {workspaces.map(ws => <option key={ws.id} value={ws.id}>📁 {ws.name}</option>)}
+                    {workspaces
+                        .filter(ws => ws.my_role === 'owner' || ws.my_role === 'admin') // ✅ Filters out 'member' roles
+                        .map(ws => <option key={ws.id} value={ws.id}>📁 {ws.name}</option>)
+                    }
                   </select>
                 </div>
                 {workspaceId !== '' && (

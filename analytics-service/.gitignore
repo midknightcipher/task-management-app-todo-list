@@ -1,0 +1,3 @@
+# analytics-service/.gitignore
+.env
+__pycache__/

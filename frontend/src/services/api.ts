@@ -4,12 +4,14 @@ import {
   CreateTaskInput,
   UpdateTaskInput,
   DashboardStats,
-  PriorityBreakdown,
+  TeamIntelligence,
+  PipelineHealth,
   HeatmapData,
   Workspace,
   WorkspaceMember,
   WorkspaceActivity,
   User,
+  ActionRadarData,
 } from '../types';
 import { authService } from './auth';
 
@@ -72,16 +74,27 @@ export const tasksAPI = {
     apiClient.patch<Task>(`/tasks/${id}/toggle`),
 };
 
-// ================= ANALYTICS =================
+// ================= ANALYTICS (ETL-Powered) =================
 export const analyticsAPI = {
+  // Reads from user_daily_metrics or workspace_daily_metrics
   getDashboardStats: (workspace_id?: string) =>
     apiClient.get<DashboardStats>('/analytics/dashboard', { params: { workspace_id } }),
 
-  getPriorityAnalytics: (workspace_id?: string) =>
-    apiClient.get<PriorityBreakdown[]>('/analytics/priority', { params: { workspace_id } }),
+  // Reads the pre-aggregated JSON for the new team charts
+  getTeamIntelligence: (workspace_id?: string) =>
+    apiClient.get<TeamIntelligence>('/analytics/intelligence', { params: { workspace_id } }),
 
+  // Reads from etl_pipeline_logs to power the UI widget
+  getPipelineHealth: () =>
+    apiClient.get<PipelineHealth>('/analytics/pipeline-health'),
+
+  // Keeps existing real-time DB logic for now
   getProductivityHeatmap: (workspace_id?: string) =>
     apiClient.get<HeatmapData[]>('/analytics/heatmap', { params: { workspace_id } }),
+
+  // Fetch the Action Radar lists (urgent/stale tasks)
+  getActionRadar: (workspace_id?: string) =>
+    apiClient.get<ActionRadarData>('/analytics/action-radar', { params: { workspace_id } }),
 };
 
 // ================= WORKSPACES =================
@@ -95,7 +108,7 @@ export const workspaceAPI = {
   getById: (id: string) =>
     apiClient.get<Workspace>(`/workspaces/${id}`),
 
-  // ✅ Fixed: Added delete method to resolve TS2339 error
+  // Added delete method to resolve TS2339 error
   delete: (id: string) =>
     apiClient.delete(`/workspaces/${id}`),
 
@@ -105,7 +118,7 @@ export const workspaceAPI = {
   invite: (workspaceId: string, email: string) =>
     apiClient.post(`/workspaces/${workspaceId}/invite`, { email }),
 
-  // ✅ Ensured: memberId (User ID) is used to match your backend's delete route
+  // memberId (User ID) is used to match your backend's delete route
   removeMember: (workspaceId: string, memberId: string) =>
     apiClient.delete(`/workspaces/${workspaceId}/members/${memberId}`),
 
