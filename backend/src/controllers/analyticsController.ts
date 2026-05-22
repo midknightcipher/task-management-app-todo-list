@@ -78,62 +78,6 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
   }
 };
 
-// Replaces the old 'Priority' chart with the new Team Intelligence data
-// We just pass the JSON directly from the ETL pipeline to the frontend
-export const getTeamIntelligence = async (req: Request, res: Response): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
-    const workspaceId = req.query.workspace_id as string | undefined;
-    
-    if (!workspaceId) {
-       // Return empty arrays if no workspace is selected so the UI doesn't crash
-       res.json({ leaderboard: [], workload: [] });
-       return;
-    }
-
-    const result = await pool.query(
-      `SELECT leaderboard_data, workload_distribution 
-       FROM workspace_daily_metrics 
-       WHERE workspace_id = $1 
-       ORDER BY updated_at DESC LIMIT 1`,
-      [workspaceId]
-    );
-
-    const data = result.rows[0] || { leaderboard_data: [], workload_distribution: [] };
-    
-    res.json({
-      leaderboard: data.leaderboard_data,
-      workload: data.workload_distribution
-    });
-  } catch (error) {
-    console.error('Get team intelligence error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-// Exposes the Python background worker's health status for the new UI widget
-export const getPipelineHealth = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const result = await pool.query(
-      `SELECT status, rows_processed, run_end 
-       FROM etl_pipeline_logs 
-       ORDER BY run_end DESC LIMIT 1`
-    );
-    
-    // Default to unknown if the pipeline hasn't run yet
-    res.json(result.rows[0] || { status: 'unknown', rows_processed: 0, run_end: null });
-  } catch (error) {
-    console.error('Get pipeline health error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-// Left this exactly as it was. It still uses the TaskModel for now since
-// moving a complex 365-day heatmap to ETL is a bit overkill for this sprint.
 export const getProductivityHeatmap = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {

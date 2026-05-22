@@ -33,8 +33,6 @@ NOT NULL,
   completion_rate NUMERIC
 (5,2) DEFAULT 0.00,
   productivity_score INTEGER DEFAULT 0,
-  avg_completion_time_hrs NUMERIC
-(7,2) DEFAULT 0.00,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   -- The composite unique key enables our UPSERT strategy
   UNIQUE
@@ -53,29 +51,8 @@ NOT NULL,
   total_tasks INTEGER DEFAULT 0,
   completed_tasks INTEGER DEFAULT 0,
   active_members INTEGER DEFAULT 0,
-  overdue_percentage NUMERIC
-(5,2) DEFAULT 0.00,
   workspace_health_score INTEGER DEFAULT 0,
-  -- JSONB is perfect for frontend charts (leaderboards, workload donuts)
-  leaderboard_data JSONB DEFAULT '[]'::jsonb,
-  workload_distribution JSONB DEFAULT '[]'::jsonb,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE
 (workspace_id, metric_date)
-);
-
--- ETL Pipeline Health Table
-CREATE TABLE
-IF NOT EXISTS etl_pipeline_logs
-(
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid
-(),
-  run_start TIMESTAMP NOT NULL,
-  run_end TIMESTAMP,
-  status VARCHAR
-(20) CHECK
-(status IN
-('running', 'success', 'failed')),
-  rows_processed INTEGER DEFAULT 0,
-  error_message TEXT
 );
