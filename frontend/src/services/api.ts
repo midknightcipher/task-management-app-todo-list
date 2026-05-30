@@ -4,8 +4,6 @@ import {
   CreateTaskInput,
   UpdateTaskInput,
   DashboardStats,
-  TeamIntelligence,
-  PipelineHealth,
   HeatmapData,
   Workspace,
   WorkspaceMember,
@@ -80,13 +78,6 @@ export const analyticsAPI = {
   getDashboardStats: (workspace_id?: string) =>
     apiClient.get<DashboardStats>('/analytics/dashboard', { params: { workspace_id } }),
 
-  // Reads the pre-aggregated JSON for the new team charts
-  getTeamIntelligence: (workspace_id?: string) =>
-    apiClient.get<TeamIntelligence>('/analytics/intelligence', { params: { workspace_id } }),
-
-  // Reads from etl_pipeline_logs to power the UI widget
-  getPipelineHealth: () =>
-    apiClient.get<PipelineHealth>('/analytics/pipeline-health'),
 
   // Keeps existing real-time DB logic for now
   getProductivityHeatmap: (workspace_id?: string) =>

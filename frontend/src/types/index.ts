@@ -109,23 +109,6 @@ export interface LeaderboardItem {
   completed_tasks: number;
 }
 
-export interface WorkloadItem {
-  email: string;
-  pending_tasks: number;
-  overdue_tasks: number;
-}
-
-export interface TeamIntelligence {
-  leaderboard: LeaderboardItem[];
-  workload: WorkloadItem[];
-}
-
-// ETL Payload: Pipeline infrastructure health
-export interface PipelineHealth {
-  status: 'success' | 'failed' | 'running' | 'unknown';
-  rows_processed: number;
-  run_end: string | null;
-}
 
 export interface HeatmapData {
   date: string;

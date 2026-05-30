@@ -53,7 +53,7 @@ def run_workspace_metrics_etl():
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
-        # FIX: Added accurate overdue logic and COUNT(DISTINCT user_id) for active members
+        # Added accurate overdue logic and COUNT(DISTINCT user_id) for active members
         query = """
             SELECT workspace_id, created_at::date as metric_date,
                    COUNT(*) FILTER (WHERE status = 'Completed') as completed_tasks,

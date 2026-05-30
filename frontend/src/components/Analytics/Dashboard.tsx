@@ -3,7 +3,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, Cell,
 } from 'recharts';
-import { DashboardStats, HeatmapData, Task, TeamIntelligence, PipelineHealth, Workspace } from '../../types';
+import { DashboardStats, HeatmapData, Task, Workspace } from '../../types';
 import { analyticsAPI, tasksAPI, workspaceAPI } from '../../services/api';
 import '../styles/Dashboard.css';
 
@@ -130,8 +130,6 @@ export const Dashboard: React.FC = () => {
   
   // Data State
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [intelligence, setIntelligence] = useState<TeamIntelligence>({ leaderboard: [], workload: [] });
-  const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -141,14 +139,10 @@ export const Dashboard: React.FC = () => {
       const wsParam = selectedWorkspace || undefined;
       Promise.all([
         analyticsAPI.getDashboardStats(wsParam),
-        analyticsAPI.getTeamIntelligence(wsParam),
-        analyticsAPI.getPipelineHealth(),
         workspaceAPI.getAll(),
         tasksAPI.getAll(undefined, undefined, wsParam)
-      ]).then(([statsRes, intelRes, pipeRes, wsRes, tasksRes]) => {
+      ]).then(([statsRes, wsRes, tasksRes]) => {
         setStats(statsRes.data);
-        setIntelligence(intelRes.data);
-        setPipelineHealth(pipeRes.data);
         setWorkspaces(wsRes.data || []);
         setTasks(tasksRes.data || []);
       }).finally(() => setLoading(false));
@@ -215,46 +209,7 @@ export const Dashboard: React.FC = () => {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Team Leaderboard" sub="Top contributors by completed tasks (ETL Derived)">
-          {intelligence.leaderboard.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={intelligence.leaderboard.slice(0, 5)} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
-                <XAxis type="number" hide />
-                <YAxis dataKey="email" type="category" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} width={100} tickFormatter={(val: string) => val.split('@')[0]} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="completed_tasks" name="Completed" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={24} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '14px' }}>
-              Select a Workspace to view team rankings.
-            </div>
-          )}
-        </ChartCard>
-      </div>
 
-      {/* LOWER SECTION: Workload Distribution + Productivity Intelligence */}
-      <div className="an__grid an__grid--2">
-        <ChartCard title="Workload Distribution" sub="Pending vs Overdue tasks per member">
-          {intelligence.workload.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={intelligence.workload} margin={{ top: 5, right: 10, left: -20, bottom: 0 }} barSize={32}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="email" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val: string) => val.split('@')[0]} />
-                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
-                <Bar dataKey="pending_tasks" name="Pending" stackId="a" fill="#0ea5e9" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="overdue_tasks" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '14px' }}>
-              Select a Workspace to view workload.
-            </div>
-          )}
-        </ChartCard>
 
         {/* Updated Productivity Intelligence using ETL data directly */}
         <ChartCard title="Productivity Intelligence" sub="Pipeline-calculated performance indicators">
@@ -288,45 +243,6 @@ export const Dashboard: React.FC = () => {
 
       {/* BOTTOM SECTION: Heatmap + Pipeline Infrastructure Widget */}
       <HeatmapSection workspaceId={selectedWorkspace} />
-
-      {/* NEW: Data Engineering Proof Widget */}
-      {pipelineHealth && (
-        <div style={{
-          marginTop: '32px', background: '#0f172a', color: '#f8fafc', 
-          padding: '16px 24px', borderRadius: '12px', display: 'flex', 
-          justifyContent: 'space-between', alignItems: 'center',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ color: '#38bdf8' }}><Icons.database /></div>
-            <div>
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, letterSpacing: '0.5px' }}>ANALYTICS ETL PIPELINE</h4>
-              <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Powered by Python Background Worker</p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '32px', textAlign: 'right' }}>
-            <div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Status</div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: pipelineHealth.status === 'success' ? '#34d399' : '#f87171', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: pipelineHealth.status === 'success' ? '#34d399' : '#f87171' }} />
-                {pipelineHealth.status.toUpperCase()}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Rows Processed</div>
-              <div style={{ fontSize: '14px', fontWeight: 600 }}>{pipelineHealth.rows_processed}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Last Sync</div>
-              <div style={{ fontSize: '14px', fontWeight: 600 }}>
-                {pipelineHealth.run_end ? new Date(pipelineHealth.run_end).toLocaleTimeString() : 'Waiting...'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };
