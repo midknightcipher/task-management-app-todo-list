@@ -1,0 +1,190 @@
+/* ============================================================
+   AppLayout.css — TaskPilot
+   ============================================================ */
+
+.app-shell {
+    min-height: 100vh;
+    background-color: #fafafa;
+    font-family: var(--font-body, system-ui, sans-serif);
+    color: #0f172a;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Top Navigation (Taller, Premium Feel) ── */
+.app-nav {
+    height: 72px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+.app-nav__inner {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 32px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-nav__left {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+}
+
+/* ── Brand ── */
+.app-nav__brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.app-nav__brand-icon {
+    width: 32px;
+    height: 32px;
+    background-color: #0ea5e9;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+}
+
+.app-nav__brand-name {
+    font-family: var(--font-display, system-ui, sans-serif);
+    font-weight: 700;
+    font-size: 18px;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+}
+
+/* ── Links ── */
+.app-nav__links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-nav__link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.app-nav__link svg {
+    opacity: 0.7;
+}
+
+.app-nav__link:hover {
+    background-color: #f8fafc;
+    color: #334155;
+}
+
+.app-nav__link--active {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+
+.app-nav__link--active svg {
+    opacity: 1;
+    color: #0ea5e9;
+}
+
+/* ── Right side ── */
+.app-nav__right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.app-nav__user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-nav__user-text {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+}
+
+.app-nav__user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.app-nav__user-plan {
+    font-size: 12px;
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+.app-nav__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.app-nav__divider {
+    width: 1px;
+    height: 24px;
+    background-color: #e2e8f0;
+}
+
+.app-nav__logout {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.app-nav__logout:hover {
+    color: #ef4444;
+    background-color: #fef2f2;
+}
+
+/* ── Main Body ── */
+.app-body {
+    flex: 1;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 1024px) {
+    .app-nav__links {
+        display: none;
+    }
+}

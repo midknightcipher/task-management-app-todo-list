@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { authAPI } from '../services/api';
-import { authService } from '../services/auth';
+// 🆕 Redux Imports
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { login } from '../store/slices/authSlice';
 import './LoginPage.css';
 
 const IconCheck = () => (
@@ -12,24 +13,28 @@ const IconCheck = () => (
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch(); // 🆕 Initialize dispatch
+
+  // Keep form inputs in local state (Best Practice)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+
+  // 🆕 Pull loading status and network errors directly from Redux global state
+  const { status, error } = useAppSelector((state) => state.auth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    if (!email || !password) { setError('Please fill in all fields.'); return; }
+    if (!email || !password) return; // Basic validation
+
     try {
-      setLoading(true);
-      const res = await authAPI.login(email, password);
-      authService.setToken(res.data.token);
-      authService.setUser(res.data.user);
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'Invalid email or password.');
-    } finally { setLoading(false); }
+      // 🆕 Dispatch the thunk and use .unwrap() to handle the promise result locally
+      await dispatch(login({ email, password })).unwrap();
+      navigate('/');
+    } catch (err) {
+      // Intentionally left blank. 
+      // The thunk handles the error and puts it in the Redux state, 
+      // which automatically triggers a re-render to display it below.
+    }
   };
 
   return (
@@ -67,6 +72,7 @@ export const LoginPage: React.FC = () => {
               <p>Enter your details to access your workspace</p>
             </div>
 
+            {/* 🆕 Render the error string directly from Redux state */}
             {error && <div className="auth__error">{error}</div>}
 
             <form onSubmit={handleSubmit} className="auth-form">
@@ -93,8 +99,9 @@ export const LoginPage: React.FC = () => {
                   required 
                 />
               </div>
-              <button type="submit" className="btn-auth-submit" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign in to Workspace'}
+              {/* 🆕 Disable button and change text based on Redux status */}
+              <button type="submit" className="btn-auth-submit" disabled={status === 'loading'}>
+                {status === 'loading' ? 'Signing in...' : 'Sign in to Workspace'}
               </button>
             </form>
 

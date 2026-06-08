@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { tasksAPI } from '../services/api';
+import React, { useEffect, useState } from 'react';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchTasks, updateTask, deleteTask } from '../store/slices/taskSlice';
 import { Task } from '../types';
+import AppLayout from '../components/AppLayout';
 import './Pages.css';
 
 const IconTrash = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
@@ -10,7 +12,9 @@ const IconCheckCircle = () => <svg width="16" height="16" viewBox="0 0 24 24" fi
 const IconX = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 
 const MyTasksPage: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const dispatch = useAppDispatch();
+  const { items: allTasks, status: tasksStatus } = useAppSelector((state) => state.tasks);
+  const tasks = allTasks.filter(t => t.workspace_id === null);
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editTaskId, setEditTaskId] = useState('');
@@ -18,17 +22,9 @@ const MyTasksPage: React.FC = () => {
   const [editPriority, setEditPriority] = useState<'Low'|'Medium'|'High'>('Medium');
   const [editDueDate, setEditDueDate] = useState('');
 
-  const fetchPersonalTasks = useCallback(async () => {
-    try {
-      const res = await tasksAPI.getAll();
-      const personalTasks = (res.data || []).filter((t: Task) => t.workspace_id === null);
-      setTasks(personalTasks);
-    } catch (error) {
-      console.error("Failed to load personal tasks", error);
-    }
-  }, []);
-
-  useEffect(() => { fetchPersonalTasks(); }, [fetchPersonalTasks]);
+  useEffect(() => {
+    if (tasksStatus === 'idle') dispatch(fetchTasks());
+  }, [dispatch, tasksStatus]);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return '';
@@ -43,22 +39,15 @@ const MyTasksPage: React.FC = () => {
     return due < today;
   };
 
-  // --- Actions ---
   const handleStatusChange = async (task: Task, newStatus: string) => {
-    try {
-      await tasksAPI.update(task.id, { 
-        status: newStatus as any,
-        completed_at: newStatus === 'Completed' ? new Date().toISOString() : null
-      });
-      fetchPersonalTasks();
-    } catch (err) { alert("Failed to update status"); }
+    dispatch(updateTask({ 
+      id: task.id, 
+      data: { status: newStatus as any, completed_at: newStatus === 'Completed' ? new Date().toISOString() : null }
+    }));
   };
 
-  const handleDelete = async (id: string) => {
-    if(window.confirm("Are you sure you want to delete this task permanently?")) {
-      await tasksAPI.delete(id);
-      setTasks(tasks.filter(t => t.id !== id));
-    }
+  const handleDelete = (id: string) => {
+    if(window.confirm("Are you sure you want to delete this task permanently?")) dispatch(deleteTask(id));
   };
 
   const openEditModal = (task: Task) => {
@@ -71,137 +60,82 @@ const MyTasksPage: React.FC = () => {
 
   const handleUpdateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await tasksAPI.update(editTaskId, { 
-        title: editTitle, 
-        priority: editPriority,
-        due_date: editDueDate || null
-      });
-      setIsEditModalOpen(false);
-      fetchPersonalTasks();
-    } catch (err) {
-      alert("Failed to update task");
-    }
+    await dispatch(updateTask({ id: editTaskId, data: { title: editTitle, priority: editPriority, due_date: editDueDate || null } }));
+    setIsEditModalOpen(false);
   };
 
   return (
-    <div className="pg__container">
-      <div className="pg__header">
-        <div>
-          <h1 className="pg__title">My Tasks</h1>
-          <p className="pg__subtitle">Your private personal tasks</p>
-        </div>
-      </div>
-
-      <div className="table-container">
-        <table className="task-table">
-          <thead>
-            <tr>
-              <th>TASK</th>
-              <th>DATES</th>
-              <th>STATUS</th>
-              <th>PRIORITY</th>
-              <th>ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.length === 0 && <tr><td colSpan={5} className="text-muted">No personal tasks found.</td></tr>}
-            {tasks.map(task => (
-              <tr key={task.id}>
-                
-                <td className="fw-600">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {task.status === 'Completed' ? <IconCheckCircle /> : <IconCircle />}
-                    <span style={{ textDecoration: task.status === 'Completed' ? 'line-through' : 'none', color: task.status === 'Completed' ? '#94a3b8' : '#0f172a' }}>
-                      {task.title}
-                    </span>
-                  </div>
-                </td>
-                
-                {/* Timestamps & Overdue */}
-                <td>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '11.5px', color: '#64748b' }}>Created: {formatDate(task.created_at)}</span>
-                    {task.due_date && (
-                      <span style={{ fontSize: '11.5px', color: isOverdue(task.due_date, task.status) ? '#ef4444' : '#64748b', fontWeight: isOverdue(task.due_date, task.status) ? 600 : 400 }}>
-                        Due: {formatDate(task.due_date)} {isOverdue(task.due_date, task.status) && '(Overdue)'}
-                      </span>
-                    )}
-                    {task.completed_at && (
-                      <span style={{ fontSize: '11.5px', color: '#10b981', fontWeight: 600 }}>Done: {formatDate(task.completed_at)}</span>
-                    )}
-                  </div>
-                </td>
-
-                {/* ✅ Inline Status Dropdown */}
-                <td>
-                  <select
-                    value={task.status}
-                    onChange={(e) => handleStatusChange(task, e.target.value)}
-                    className={`badge-status ${task.status.toLowerCase().replace(' ', '-')}`}
-                    style={{ border: '1px solid transparent', outline: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px', borderRadius: '6px', appearance: 'none', textAlign: 'center' }}
-                  >
-                    <option value="Todo">Todo</option>
-                    <option value="In-Progress">In Progress</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                </td>
-
-                <td><span className={`badge badge-${task.priority.toLowerCase()}`}>{task.priority}</span></td>
-                
-                {/* Actions */}
-                <td>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <button className="icon-btn" title="Edit Task" onClick={() => openEditModal(task)}><IconEdit /></button>
-                    <button className="icon-btn" title="Delete Task" onClick={() => handleDelete(task.id)}><IconTrash /></button>
-                  </div>
-                </td>
-
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ── EDIT TASK MODAL ── */}
-      {isEditModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>Edit Personal Task</h2>
-              <button className="icon-btn" onClick={() => setIsEditModalOpen(false)}><IconX /></button>
-            </div>
-            <form onSubmit={handleUpdateTask}>
-              <div className="input-group">
-                <label>Task Title</label>
-                <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} required />
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="input-group">
-                  <label>Priority</label>
-                  <select value={editPriority} onChange={e => setEditPriority(e.target.value as any)}>
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label>Due Date</label>
-                  <input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
-                </div>
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-submit">Save Changes</button>
-              </div>
-            </form>
+    <AppLayout>
+      <div className="pg__container">
+        <div className="pg__header">
+          <div>
+            <h1 className="pg__title">My Tasks</h1>
+            <p className="pg__subtitle">Your private personal tasks</p>
           </div>
         </div>
-      )}
 
-    </div>
+        <div className="table-container">
+          {tasksStatus === 'loading' ? <p>Loading...</p> : (
+            <table className="task-table">
+              <thead>
+                <tr><th>TASK</th><th>DATES</th><th>STATUS</th><th>PRIORITY</th><th>ACTIONS</th></tr>
+              </thead>
+              <tbody>
+                {tasks.length === 0 && <tr><td colSpan={5} className="text-muted">No personal tasks found.</td></tr>}
+                {tasks.map(task => (
+                  <tr key={task.id}>
+                    <td className="fw-600">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {task.status === 'Completed' ? <IconCheckCircle /> : <IconCircle />}
+                        <span style={{ textDecoration: task.status === 'Completed' ? 'line-through' : 'none', color: task.status === 'Completed' ? '#94a3b8' : '#0f172a' }}>{task.title}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '11.5px', color: '#64748b' }}>Created: {formatDate(task.created_at)}</span>
+                        {task.due_date && <span style={{ fontSize: '11.5px', color: isOverdue(task.due_date, task.status) ? '#ef4444' : '#64748b', fontWeight: isOverdue(task.due_date, task.status) ? 600 : 400 }}>Due: {formatDate(task.due_date)} {isOverdue(task.due_date, task.status) && '(Overdue)'}</span>}
+                        {task.completed_at && <span style={{ fontSize: '11.5px', color: '#10b981', fontWeight: 600 }}>Done: {formatDate(task.completed_at)}</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <select value={task.status} onChange={(e) => handleStatusChange(task, e.target.value)} className={`badge-status ${task.status.toLowerCase().replace(' ', '-')}`} style={{ border: '1px solid transparent', outline: 'none', cursor: 'pointer', fontWeight: 600, padding: '4px 8px', borderRadius: '6px', appearance: 'none', textAlign: 'center' }}>
+                        <option value="Todo">Todo</option><option value="In-Progress">In Progress</option><option value="Completed">Completed</option>
+                      </select>
+                    </td>
+                    <td><span className={`badge badge-${task.priority.toLowerCase()}`}>{task.priority}</span></td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button className="icon-btn" title="Edit Task" onClick={() => openEditModal(task)}><IconEdit /></button>
+                        <button className="icon-btn" title="Delete Task" onClick={() => handleDelete(task.id)}><IconTrash /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {isEditModalOpen && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h2>Edit Personal Task</h2>
+                <button className="icon-btn" onClick={() => setIsEditModalOpen(false)}><IconX /></button>
+              </div>
+              <form onSubmit={handleUpdateTask}>
+                <div className="input-group"><label>Task Title</label><input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} required /></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="input-group"><label>Priority</label><select value={editPriority} onChange={e => setEditPriority(e.target.value as any)}><option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option></select></div>
+                  <div className="input-group"><label>Due Date</label><input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} /></div>
+                </div>
+                <div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsEditModalOpen(false)}>Cancel</button><button type="submit" className="btn-submit">Save Changes</button></div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </AppLayout>
   );
 };
 

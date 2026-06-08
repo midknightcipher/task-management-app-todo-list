@@ -1,168 +1,362 @@
+/* ============================================================
+   LoginPage.css — TaskPilot Auth Pages (Login + Signup)
+   Fonts: Outfit (display) + IBM Plex Sans (body)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ── Full-screen hero wrapper ──────────────────────────────── */
 .auth-hero {
   min-height: 100vh;
+  background: #0b1120;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #0f172a;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   position: relative;
   overflow: hidden;
-  padding: 40px 20px;
-  font-family: 'IBM Plex Sans', sans-serif;
 }
 
-/* Background Glowing Orbs */
+/* ── Animated background shapes ───────────────────────────── */
 .shape {
   position: absolute;
-  filter: blur(80px);
   border-radius: 50%;
-  z-index: 0;
+  pointer-events: none;
+  filter: blur(80px);
+  opacity: 0.18;
+  animation: float 8s ease-in-out infinite;
 }
-.shape-1 { width: 400px; height: 400px; background: rgba(14, 165, 233, 0.15); top: -100px; right: -100px; }
-.shape-2 { width: 300px; height: 300px; background: rgba(99, 102, 241, 0.12); bottom: -50px; left: -50px; }
 
+.shape-1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, #0ea5e9, #6366f1);
+  top: -200px;
+  left: -150px;
+  animation-delay: 0s;
+}
+
+.shape-2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, #6366f1, #0ea5e9);
+  bottom: -150px;
+  right: -100px;
+  animation-delay: -4s;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(30px, -20px) scale(1.04);
+  }
+
+  66% {
+    transform: translate(-20px, 15px) scale(0.97);
+  }
+}
+
+/* ── Centred container ─────────────────────────────────────── */
 .auth-container {
   width: 100%;
   max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 24px;
   position: relative;
   z-index: 1;
 }
 
+/* ── Two-column content layout ─────────────────────────────── */
 .auth-content {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 60px;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
   align-items: center;
 }
 
-/* Left Branding Side */
+/* ── LEFT — Branding / marketing ───────────────────────────── */
+.brand-section {
+  color: #f1f5f9;
+}
+
 .logo-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 6px 14px;
-  border-radius: 100px;
-  width: fit-content;
-  color: #fff;
-  font-weight: 700;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  border-radius: 999px;
+  padding: 8px 16px;
+  margin-bottom: 32px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #38bdf8;
+  letter-spacing: 0.2px;
 }
 
-.logo-icon { color: #0ea5e9; display: flex; align-items: center; }
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
 
 .brand-section h1 {
-  font-size: 48px;
-  color: #fff;
-  line-height: 1.1;
-  margin: 24px 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(32px, 4vw, 48px);
   font-weight: 800;
+  line-height: 1.12;
   letter-spacing: -1.5px;
-}
-
-.text-gradient {
-  background: linear-gradient(90deg, #38bdf8, #818cf8);
-  -webkit-background-clip: text; /* Vendor-specific for Chrome/Safari */
-  background-clip: text;         /* ✅ Standard property for compatibility */
-  -webkit-text-fill-color: transparent;
+  margin: 0 0 16px;
+  color: #f1f5f9;
 }
 
 .brand-section p {
+  font-size: 16px;
   color: #94a3b8;
-  font-size: 18px;
-  line-height: 1.6;
-  margin-bottom: 32px;
-  max-width: 480px;
+  line-height: 1.7;
+  margin: 0 0 32px;
+  max-width: 400px;
 }
 
+/* gradient text helper */
+.text-gradient {
+  background: linear-gradient(130deg, #38bdf8 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* feature checklist */
 .feature-list {
   list-style: none;
   padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .feature-list li {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #cbd5e1;
-  margin-bottom: 16px;
+  font-size: 14px;
   font-weight: 500;
-  font-size: 15px;
+  color: #cbd5e1;
 }
 
-.feature-list li svg { color: #0ea5e9; }
+.feature-list svg {
+  flex-shrink: 0;
+  color: #10b981;
+}
 
-/* The Glass Auth Card */
+/* ── RIGHT — Auth card ─────────────────────────────────────── */
 .auth-card {
-  background: rgba(30, 41, 59, 0.5);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid #1e2d47;
+  border-radius: 20px;
   padding: 40px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
 }
 
-.auth-card-header h2 { color: #fff; font-size: 26px; margin-bottom: 8px; letter-spacing: -0.5px; }
-.auth-card-header p { color: #94a3b8; font-size: 14px; margin-bottom: 32px; }
+.auth-card-header {
+  margin-bottom: 28px;
+}
 
+.auth-card-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 6px;
+  letter-spacing: -0.5px;
+}
+
+.auth-card-header p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ── Error banner ──────────────────────────────────────────── */
 .auth__error {
   background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  padding: 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  margin-bottom: 24px;
-}
-
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; color: #e2e8f0; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
-
-.label-row { display: flex; justify-content: space-between; align-items: center; }
-.forgot-link { font-size: 12px; color: #38bdf8; text-decoration: none; }
-
-.auth-form input {
-  width: 100%;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid #334155;
-  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  border-radius: 10px;
   padding: 12px 16px;
-  color: #fff;
-  transition: all 0.2s;
+  font-size: 13.5px;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+/* ── Form ──────────────────────────────────────────────────── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.2px;
+}
+
+.form-group input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #1e2d47;
+  border-radius: 10px;
+  padding: 12px 16px;
   font-size: 14px;
-}
-
-.auth-form input:focus {
-  border-color: #38bdf8;
+  color: #f1f5f9;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   outline: none;
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
+  transition: border-color 0.18s, box-shadow 0.18s;
 }
 
+.form-group input::placeholder {
+  color: #334155;
+}
+
+.form-group input:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+/* ── Forgot password row ───────────────────────────────────── */
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.forgot-link {
+  font-size: 13px;
+  color: #0ea5e9;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.18s;
+}
+
+.forgot-link:hover {
+  color: #38bdf8;
+}
+
+/* ── Submit button ─────────────────────────────────────────── */
 .btn-auth-submit {
   width: 100%;
-  background: #0ea5e9;
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
   color: #fff;
   border: none;
-  border-radius: 12px;
-  padding: 14px;
-  font-weight: 600;
+  border-radius: 10px;
+  padding: 13px 20px;
   font-size: 15px;
+  font-weight: 700;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   cursor: pointer;
-  margin-top: 12px;
-  transition: all 0.2s;
+  transition: opacity 0.18s, transform 0.12s, box-shadow 0.18s;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
+  letter-spacing: 0.1px;
+  margin-top: 4px;
 }
 
-.btn-auth-submit:hover { background: #0284c7; transform: translateY(-1px); }
-.btn-auth-submit:disabled { opacity: 0.7; cursor: not-allowed; }
-
-.auth-card-footer { text-align: center; margin-top: 24px; }
-.auth-card-footer p { color: #94a3b8; font-size: 14px; }
-.auth-card-footer a { color: #38bdf8; text-decoration: none; font-weight: 600; }
-
-/* Responsive adjustments */
-@media (max-width: 900px) {
-  .auth-content { grid-template-columns: 1fr; gap: 40px; text-align: center; }
-  .brand-section h1 { font-size: 36px; }
-  .brand-section p { margin: 0 auto 32px; }
-  .feature-list { display: none; }
-  .logo-pill { margin: 0 auto; }
+.btn-auth-submit:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
 }
+
+.btn-auth-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-auth-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Card footer ───────────────────────────────────────────── */
+.auth-card-footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.auth-card-footer p {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+.auth-card-footer a {
+  color: #0ea5e9;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.18s;
+}
+
+.auth-card-footer a:hover {
+  color: #38bdf8;
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .auth-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .brand-section {
+    text-align: center;
+  }
+
+  .brand-section p,
+  .feature-list {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .logo-pill {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px 20px;
+  }
+
+  .auth-container {
+    padding: 24px 16px;
+  }
+}
+

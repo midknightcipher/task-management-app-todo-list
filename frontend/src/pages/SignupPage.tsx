@@ -36,7 +36,7 @@ export const SignupPage: React.FC = () => {
       const res = await authAPI.signup(email, password); 
       authService.setToken(res.data.token);
       authService.setUser(res.data.user);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Failed to create account. Email might already be in use.');
     } finally { 
