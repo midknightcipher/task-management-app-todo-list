@@ -143,7 +143,7 @@ def run_all_pipelines():
                         r['user_id'],
                         r['metric_date'],
                         r['tasks_created'],
-                        r['tasks_completed'],
+                        r['completed_tasks'],
                         r['overdue_tasks'],
                         r['completion_rate'],
                         r['productivity_score'],
