@@ -242,7 +242,6 @@ def run_all_pipelines():
         ws_rows = cursor.fetchall()
 
         if ws_rows:
-            logging.info(f"Workspace sample row: {dict(ws_rows[0])}")
             psycopg2.extras.execute_values(
                 cursor,
                 """
