@@ -143,7 +143,7 @@ def run_all_pipelines():
                         r['user_id'],
                         r['metric_date'],
                         r['tasks_created'],
-                        r['completed_tasks'],
+                        r['tasks_completed'],
                         r['overdue_tasks'],
                         r['completion_rate'],
                         r['productivity_score'],
@@ -242,6 +242,7 @@ def run_all_pipelines():
         ws_rows = cursor.fetchall()
 
         if ws_rows:
+            logging.info(f"Workspace sample row: {dict(ws_rows[0])}")
             psycopg2.extras.execute_values(
                 cursor,
                 """
@@ -261,7 +262,7 @@ def run_all_pipelines():
                         r['workspace_id'],
                         r['metric_date'],
                         r['total_tasks'],
-                        r['tasks_completed'],  # maps to completed_tasks column
+                        r['completed_tasks'],  # maps to completed_tasks column
                         r['active_members'],
                         r['workspace_health_score'],
                         datetime.utcnow(),
