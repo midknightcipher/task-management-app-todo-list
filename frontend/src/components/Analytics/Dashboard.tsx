@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, Cell,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { DashboardStats, HeatmapData, Task, Workspace } from '../../types';
+import { Task, Workspace } from '../../types';
 import { analyticsAPI, tasksAPI, workspaceAPI } from '../../services/api';
 import '../styles/Dashboard.css';
 
@@ -14,10 +14,7 @@ const Icons = {
   users:     () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
   alert:     () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   percent:   () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>,
-  timer:     () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
   activity:  () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
-  database:  () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>,
-  heart:     () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
 };
 
 /* ── Legacy function (kept for the Weekly Line Chart) ──────── */
@@ -80,13 +77,14 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-/* ── Heatmap Component (Kept exactly as requested) ──────────── */
+/* ── Heatmap Component ──────────── */
 const HeatmapSection = ({ workspaceId }: { workspaceId: string }) => {
-  const [data, setData] = useState<HeatmapData[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    analyticsAPI.getProductivityHeatmap(workspaceId || undefined)
+    const currentYear = new Date().getFullYear();
+    analyticsAPI.getHeatmap(currentYear, workspaceId || undefined)
       .then(r => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -98,7 +96,7 @@ const HeatmapSection = ({ workspaceId }: { workspaceId: string }) => {
     return d.toISOString().split('T')[0];
   }), []);
 
-  const countMap = useMemo(() => new Map(data.map(d => [d.date.split('T')[0], d.completed_count])), [data]);
+  const countMap = useMemo(() => new Map(data.map(d => [d.date.split('T')[0], d.count || d.completed_count])), [data]);
   const getLevel = (n: number) => n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 5 ? 3 : 4;
 
   if (loading) return <ChartCard title="30-Day Activity" sub="Tasks completed per day"><div className="an-loading-sm"><div className="an-spinner" /></div></ChartCard>;
@@ -124,44 +122,44 @@ const HeatmapSection = ({ workspaceId }: { workspaceId: string }) => {
    MAIN ANALYTICS DASHBOARD
    ═══════════════════════════════════════════════════════════════ */
 export const Dashboard: React.FC = () => {
-  // UI State
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>('');
   
-  // Data State
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [kpis, setKpis] = useState<any>(null);
+  const [latestTrend, setLatestTrend] = useState<any>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Polling logic for Near Real-Time feel
   useEffect(() => {
     const fetchData = () => {
       const wsParam = selectedWorkspace || undefined;
       Promise.all([
-        analyticsAPI.getDashboardStats(wsParam),
+        wsParam ? analyticsAPI.getWorkspaceKPIs(wsParam) : analyticsAPI.getKPIs(),
+        analyticsAPI.getTrends('30d', wsParam),
         workspaceAPI.getAll(),
         tasksAPI.getAll(undefined, undefined, wsParam)
-      ]).then(([statsRes, wsRes, tasksRes]) => {
-        setStats(statsRes.data);
+      ]).then(([kpiRes, trendsRes, wsRes, tasksRes]) => {
+        setKpis(kpiRes.data);
+        const trends = trendsRes.data || [];
+        setLatestTrend(trends.length > 0 ? trends[trends.length - 1] : null);
         setWorkspaces(wsRes.data || []);
         setTasks(tasksRes.data || []);
       }).finally(() => setLoading(false));
     };
 
     fetchData();
-    // Poll the fast ETL endpoints every 30 seconds
     const interval = setInterval(fetchData, 30000); 
     return () => clearInterval(interval);
   }, [selectedWorkspace]);
 
   const weeklyData = useMemo(() => deriveWeeklyData(tasks), [tasks]);
+  const isPersonal = !selectedWorkspace;
 
-  if (loading && !stats) return <div className="an-loading"><div className="an-spinner" /><p>Loading ETL Analytics…</p></div>;
-  if (!stats) return <div className="an-error">Failed to load analytics</div>;
+  if (loading && !kpis) return <div className="an-loading"><div className="an-spinner" /><p>Loading ETL Analytics…</p></div>;
+  if (!kpis) return <div className="an-error">Failed to load analytics</div>;
 
   return (
     <div className="an">
-      {/* Scope Selector */}
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <h2 style={{ fontSize: '18px', margin: 0 }}>Analytics Scope:</h2>
         <select 
@@ -174,26 +172,24 @@ export const Dashboard: React.FC = () => {
         </select>
       </div>
 
-      {/* TOP SECTION: KPI Cards (Driven strictly by the ETL payload) */}
       <div className="an__stats">
-        {stats.mode === 'personal' ? (
+        {isPersonal ? (
           <>
-            <StatCard label="Tasks Completed" value={stats.tasksCompleted} icon={<Icons.check />} accent="#10b981" sub={`Out of ${stats.tasksCreated} created`} />
-            <StatCard label="Completion Rate" value={`${stats.completionRate}%`} icon={<Icons.percent />} accent="#0ea5e9" />
-            <StatCard label="Productivity Score" value={stats.productivityScore} icon={<Icons.activity />} accent="#8b5cf6" sub="Calculated via ETL" />
-            <StatCard label="Overdue Tasks" value={stats.overdueTasks} icon={<Icons.alert />} accent="#ef4444" />
+            <StatCard label="Tasks Completed" value={kpis.completed_tasks} icon={<Icons.check />} accent="#10b981" sub={`Out of ${kpis.total_tasks} created`} />
+            <StatCard label="Completion Rate" value={`${(kpis.completion_rate * 100).toFixed(0)}%`} icon={<Icons.percent />} accent="#0ea5e9" />
+            <StatCard label="Productivity Score" value={latestTrend?.productivity_score || 0} icon={<Icons.activity />} accent="#8b5cf6" sub="Calculated via ETL" />
+            <StatCard label="Overdue Tasks" value={kpis.overdue_tasks} icon={<Icons.alert />} accent="#ef4444" />
           </>
         ) : (
           <>
-            <StatCard label="Workspace Health" value={`${stats.healthScore}/100`} icon={<Icons.heart />} accent={stats.healthScore > 80 ? '#10b981' : '#f59e0b'} sub="Based on overdue rates" />
-            <StatCard label="Total Tasks" value={stats.totalTasks} icon={<Icons.layers />} accent="#0ea5e9" sub={`${stats.completedTasks} completed`} />
-            <StatCard label="Active Members" value={stats.activeMembers} icon={<Icons.users />} accent="#8b5cf6" />
-            <StatCard label="Overdue Tasks" value={stats.overdueTasks} icon={<Icons.alert />} accent={stats.overdueTasks > 0 ? '#ef4444' : '#10b981'} />
+            <StatCard label="Total Tasks" value={kpis.total_tasks} icon={<Icons.layers />} accent="#0ea5e9" sub={`${kpis.completed_tasks} completed`} />
+            <StatCard label="Completion Rate" value={`${(kpis.completion_rate * 100).toFixed(0)}%`} icon={<Icons.percent />} accent="#10b981" />
+            <StatCard label="Productivity Score" value={latestTrend?.productivity_score || 0} icon={<Icons.activity />} accent="#8b5cf6" sub="Calculated via ETL" />
+            <StatCard label="Overdue Tasks" value={kpis.overdue_tasks} icon={<Icons.alert />} accent={kpis.overdue_tasks > 0 ? '#ef4444' : '#10b981'} />
           </>
         )}
       </div>
 
-      {/* MIDDLE SECTION: Weekly Activity + Team Leaderboard */}
       <div className="an__grid an__grid--2">
         <ChartCard title="Weekly Activity" sub="Operational tasks created vs completed">
           <ResponsiveContainer width="100%" height={240}>
@@ -209,31 +205,28 @@ export const Dashboard: React.FC = () => {
           </ResponsiveContainer>
         </ChartCard>
 
-
-
-        {/* Updated Productivity Intelligence using ETL data directly */}
         <ChartCard title="Productivity Intelligence" sub="Pipeline-calculated performance indicators">
            <div className="an__productivity" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', height: '100%' }}>
-              {stats.mode === 'personal' ? (
+              {isPersonal ? (
                 <>
                   <div className="an-pi-card" style={{ borderTopColor: '#8b5cf6', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-                    <div style={{ color: '#8b5cf6', fontSize: '24px', fontWeight: 600 }}>{stats.productivityScore}</div>
+                    <div style={{ color: '#8b5cf6', fontSize: '24px', fontWeight: 600 }}>{latestTrend?.productivity_score || 0}</div>
                     <div style={{ fontSize: '13px', color: '#64748b' }}>Overall Score</div>
                   </div>
                   <div className="an-pi-card" style={{ borderTopColor: '#ef4444', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-                    <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: 600 }}>{stats.overdueTasks}</div>
+                    <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: 600 }}>{kpis.overdue_tasks}</div>
                     <div style={{ fontSize: '13px', color: '#64748b' }}>Overdue Tasks</div>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="an-pi-card" style={{ borderTopColor: stats.healthScore > 80 ? '#10b981' : '#f59e0b', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-                    <div style={{ color: stats.healthScore > 80 ? '#10b981' : '#f59e0b', fontSize: '24px', fontWeight: 600 }}>{stats.healthScore}/100</div>
-                    <div style={{ fontSize: '13px', color: '#64748b' }}>Team Health</div>
-                  </div>
                   <div className="an-pi-card" style={{ borderTopColor: '#0ea5e9', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-                    <div style={{ color: '#0ea5e9', fontSize: '24px', fontWeight: 600 }}>{stats.completedTasks}</div>
+                    <div style={{ color: '#0ea5e9', fontSize: '24px', fontWeight: 600 }}>{kpis.completed_tasks}</div>
                     <div style={{ fontSize: '13px', color: '#64748b' }}>Tasks Shipped</div>
+                  </div>
+                  <div className="an-pi-card" style={{ borderTopColor: '#ef4444', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
+                    <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: 600 }}>{kpis.overdue_tasks}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>Overdue Tasks</div>
                   </div>
                 </>
               )}
@@ -241,7 +234,6 @@ export const Dashboard: React.FC = () => {
         </ChartCard>
       </div>
 
-      {/* BOTTOM SECTION: Heatmap + Pipeline Infrastructure Widget */}
       <HeatmapSection workspaceId={selectedWorkspace} />
     </div>
   );

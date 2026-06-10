@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { tasksAPI } from '../../services/api';
 import { Task, CreateTaskInput, UpdateTaskInput } from '../../types';
+import { fetchAnalytics } from './analyticsSlice';
 
 interface TaskState {
   items: Task[];
@@ -14,50 +15,81 @@ const initialState: TaskState = {
   error: null,
 };
 
-export const fetchTasks = createAsyncThunk('tasks/fetchAll', async (_, { rejectWithValue }) => {
-  try {
-    const response = await tasksAPI.getAll();
-    return response.data;
-  } catch (err: any) {
-    return rejectWithValue('Failed to fetch tasks');
+export const fetchTasks = createAsyncThunk(
+  'tasks/fetchAll', 
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await tasksAPI.getAll();
+      return response.data;
+    } catch (err: any) {
+      return rejectWithValue('Failed to fetch tasks');
+    }
   }
-});
+);
 
-export const createTask = createAsyncThunk('tasks/create', async (data: CreateTaskInput, { rejectWithValue }) => {
-  try {
-    const response = await tasksAPI.create(data);
-    return response.data;
-  } catch (err: any) {
-    return rejectWithValue('Failed to create task');
+export const createTask = createAsyncThunk(
+  'tasks/create', 
+  async (data: CreateTaskInput, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const response = await tasksAPI.create(data);
+      
+      const state: any = getState();
+      dispatch(fetchAnalytics(state.analytics.currentWorkspaceId || 'personal'));
+      
+      return response.data;
+    } catch (err: any) {
+      return rejectWithValue('Failed to create task');
+    }
   }
-});
+);
 
-export const updateTask = createAsyncThunk('tasks/update', async ({ id, data }: { id: string; data: UpdateTaskInput }, { rejectWithValue }) => {
-  try {
-    const response = await tasksAPI.update(id, data);
-    return response.data;
-  } catch (err: any) {
-    return rejectWithValue('Failed to update task');
+export const updateTask = createAsyncThunk(
+  'tasks/update', 
+  async ({ id, data }: { id: string; data: UpdateTaskInput }, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const response = await tasksAPI.update(id, data);
+      
+      const state: any = getState();
+      dispatch(fetchAnalytics(state.analytics.currentWorkspaceId || 'personal'));
+      
+      return response.data;
+    } catch (err: any) {
+      return rejectWithValue('Failed to update task');
+    }
   }
-});
+);
 
-export const toggleTask = createAsyncThunk('tasks/toggle', async (id: string, { rejectWithValue }) => {
-  try {
-    const response = await tasksAPI.toggle(id);
-    return response.data;
-  } catch (err: any) {
-    return rejectWithValue('Failed to toggle task');
+export const toggleTask = createAsyncThunk(
+  'tasks/toggle', 
+  async (id: string, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const response = await tasksAPI.toggle(id);
+      
+      const state: any = getState();
+      dispatch(fetchAnalytics(state.analytics.currentWorkspaceId || 'personal'));
+      
+      return response.data;
+    } catch (err: any) {
+      return rejectWithValue('Failed to toggle task');
+    }
   }
-});
+);
 
-export const deleteTask = createAsyncThunk('tasks/delete', async (id: string, { rejectWithValue }) => {
-  try {
-    await tasksAPI.delete(id);
-    return id; 
-  } catch (err: any) {
-    return rejectWithValue('Failed to delete task');
+export const deleteTask = createAsyncThunk(
+  'tasks/delete', 
+  async (id: string, { dispatch, getState, rejectWithValue }) => {
+    try {
+      await tasksAPI.delete(id);
+      
+      const state: any = getState();
+      dispatch(fetchAnalytics(state.analytics.currentWorkspaceId || 'personal'));
+      
+      return id; 
+    } catch (err: any) {
+      return rejectWithValue('Failed to delete task');
+    }
   }
-});
+);
 
 const taskSlice = createSlice({
   name: 'tasks',

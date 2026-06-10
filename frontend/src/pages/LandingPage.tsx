@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAppSelector } from '../store/hooks';
 import { AuthModal } from '../components/Auth/AuthModal';
@@ -37,7 +37,15 @@ const MarketingPage: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
+  // Ref on the nav-links wrapper so the dropdown anchors to it
+  const navLinksRef = useRef<HTMLDivElement>(null);
+
   const openAuth = (mode: 'login' | 'signup') => {
+    // Toggle: clicking same button again closes the panel
+    if (isAuthModalOpen && authMode === mode) {
+      setIsAuthModalOpen(false);
+      return;
+    }
     setAuthMode(mode);
     setIsAuthModalOpen(true);
   };
@@ -51,9 +59,18 @@ const MarketingPage: React.FC = () => {
           <LogoIcon />
           <span className="brand-text">TaskPilot</span>
         </div>
-        <div className="landing-nav-links">
+
+        {/* position: relative so the dropdown is anchored here */}
+        <div className="landing-nav-links" ref={navLinksRef} style={{ position: 'relative' }}>
           <button onClick={() => openAuth('login')} className="btn-secondary">Log in</button>
           <button onClick={() => openAuth('signup')} className="btn-primary">Get Started</button>
+
+          <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+            initialMode={authMode}
+            anchorRef={navLinksRef}
+          />
         </div>
       </nav>
 
@@ -202,281 +219,327 @@ const MarketingPage: React.FC = () => {
         </div>
       </header>
 
-      {/* ── Bento Grid (Clean Text Version) ── */}
-      <section className="bento-section">
-        <h2 className="bento-title">
-            Everything you need to stay <span>organized.</span>
-        </h2>
-
-        <p className="bento-subtitle">
-            Manage projects, track progress, collaborate with teams,
-            and stay productive from a single workspace.
-        </p>
-
-        <div className="bento-grid">
-            <div className="bento-card bg-soft-blue wide">
-            <h3>Projects & Tasks</h3>
-            <p>
-                Create projects, break work into tasks,
-                and keep everything organized in one place.
-            </p>
-            </div>
-
-            <div className="bento-card bg-soft-orange">
-            <h3>Personal Workspace</h3>
-            <p>
-                Manage your private goals, study plans,
-                and daily tasks separately from team projects.
-            </p>
-            </div>
-
-            <div className="bento-card bg-soft-green">
-            <h3>Team Collaboration</h3>
-            <p>
-                Assign work, track ownership,
-                and keep everyone aligned.
-            </p>
-            </div>
-
-            <div className="bento-card bg-soft-purple">
-            <h3>Progress Tracking</h3>
-            <p>
-                Monitor task completion,
-                project health and productivity.
-            </p>
-            </div>
-
-            <div className="bento-card bg-soft-pink">
-            <h3>Activity History</h3>
-            <p>
-                View recent updates, completed tasks,
-                and project activity at a glance.
-            </p>
-            </div>
-        </div>
-    </section>
-
-      {/* ── Feature Rows (Diagrams) ── */}
-      <section className="feature-row-section">
-
-  {/* Row 1 */}
-  <div className="feature-row">
-    <div className="feature-text">
-      <h2>Personal & Team Workspaces</h2>
-
-      <p>
-        Keep your private tasks separate from team projects while managing
-        everything from one workspace. Stay focused on your own goals without
-        losing visibility into collaborative work.
-      </p>
-    </div>
-
-    <div className="f-diagram-box">
-      <div className="workspace-diagram">
-
-        <div className="workspace-column">
-          <div className="workspace-header">My Tasks</div>
-
-          <div className="workspace-task">Interview Prep</div>
-          <div className="workspace-task">Research Paper</div>
-          <div className="workspace-task">Gym Routine</div>
-        </div>
-
-        <div className="workspace-column">
-          <div className="workspace-header">Team Projects</div>
-
-          <div className="workspace-task">Frontend</div>
-          <div className="workspace-task">Backend</div>
-          <div className="workspace-task">Documentation</div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  {/* Row 2 */}
-  <div className="feature-row">
-
-    <div className="f-diagram-box">
-      <div className="progress-diagram">
-
-        <div className="progress-stats">
-
-          <div className="progress-stat">
-            <span>Total Tasks</span>
-            <strong>6</strong>
+      {/* ── Proof Bar ── */}
+      <section className="proof-bar">
+        <div className="proof-bar-inner">
+          <div className="proof-item">
+            <span className="proof-num">6</span>
+            <span className="proof-label">task views — list, board,<br/>table, calendar and more</span>
           </div>
-
-          <div className="progress-stat">
-            <span>To Do</span>
-            <strong>2</strong>
+          <div className="proof-divider" />
+          <div className="proof-item">
+            <span className="proof-num">3</span>
+            <span className="proof-label">role levels per project —<br/>Owner, Member, or Guest</span>
           </div>
-
-          <div className="progress-stat">
-            <span>In Progress</span>
-            <strong>3</strong>
+          <div className="proof-divider" />
+          <div className="proof-item">
+            <span className="proof-num">1</span>
+            <span className="proof-label">Prod Score — your daily<br/>productivity calculated live</span>
           </div>
-
-          <div className="progress-stat">
-            <span>Completed</span>
-            <strong>1</strong>
+          <div className="proof-divider" />
+          <div className="proof-item">
+            <span className="proof-num">∞</span>
+            <span className="proof-label">projects and tasks —<br/>no plan limits</span>
           </div>
-
         </div>
+      </section>
 
-        <div className="progress-bar-wrapper">
-          <div className="progress-bar-fill"></div>
-        </div>
-
-        <div className="progress-percent">
-          17% Complete
-        </div>
-
-      </div>
-    </div>
-
-    <div className="feature-text">
-      <h2>Real-Time Progress Tracking</h2>
-
-      <p>
-        See exactly what's happening across your workspace with live task
-        status updates, project visibility and activity tracking.
-      </p>
-    </div>
-
-  </div>
-
-  {/* Row 3 */}
-  <div className="feature-row">
-
-    <div className="feature-text">
-      <h2>Manage Every Project From One Place</h2>
-
-      <p>
-        Create projects, organize work, assign ownership and track milestones
-        without switching between multiple tools.
-      </p>
-    </div>
-
-    <div className="f-diagram-box">
-      <div className="project-diagram">
-
-        <div className="project-card">
-          Development
-        </div>
-
-        <div className="project-card">
-          Marketing
-        </div>
-
-        <div className="project-card">
-          Personal
-        </div>
-
-      </div>
-    </div>
-
-  </div>
-
-  {/* Row 4 */}
-  <div className="feature-row">
-
-    <div className="f-diagram-box">
-      <div className="team-diagram">
-
-        <div className="team-member">
-          <span>Ansh</span>
-          <strong>4 Tasks</strong>
-        </div>
-
-        <div className="team-member">
-          <span>Ankit</span>
-          <strong>3 Tasks</strong>
-        </div>
-
-        <div className="team-member">
-          <span>Rahul</span>
-          <strong>2 Tasks</strong>
-        </div>
-
-      </div>
-    </div>
-
-    <div className="feature-text">
-      <h2>Know What Your Team Is Working On</h2>
-
-      <p>
-        Track ownership, monitor activity and understand project progress
-        without endless status meetings.
-      </p>
-    </div>
-
-  </div>
-
-</section>
-
-      {/* ── Testimonials ── */}
-      <section className="testimonials-section">
-        <h2 className="section-title">What Our Users Say</h2>
-        <p className="section-subtitle">Join thousands of freelancers, students, and startup founders who use TaskPilot to plan their days and achieve their goals.</p>
-        
-        <div className="testimonials-grid">
-          <div className="testimonial-card">
-            <p className="t-quote">"Finally, a tool that adapts to my messy brain."</p>
-            <p className="t-body">Most platforms forced me into rigid corporate structures. TaskPilot is different — it’s light enough for my grocery lists but powerful enough to manage my freelance design clients.</p>
-            <div className="t-author">
-              <strong>Sarah L.</strong>
-              <span>Freelance Designer</span>
-            </div>
+      {/* ── Feature: Dashboard ── */}
+      <section className="feat-section">
+        <div className="feat-row">
+          <div className="feat-text">
+            <span className="feat-tag">Dashboard</span>
+            <h2>Your whole day,<br/>at a glance</h2>
+            <p>The moment you log in, you see exactly where things stand — how many tasks are due, what's in progress, what's done. No digging through projects, no guessing what to pick up next.</p>
+            <ul className="feat-list">
+              <li><IconCheck /> Live task counts by status</li>
+              <li><IconCheck /> Per-project progress bars</li>
+              <li><IconCheck /> Recent activity feed</li>
+            </ul>
           </div>
-
-          <div className="testimonial-card">
-            <p className="t-quote">"Built my entire side-hustle using this app."</p>
-            <p className="t-body">Working a 9-to-5 while launching a startup is exhausting. TaskPilot kept my weekend projects organized so I always knew exactly what to build next when I sat down at my laptop.</p>
-            <div className="t-author">
-              <strong>David R.</strong>
-              <span>Indie Developer</span>
-            </div>
-          </div>
-
-          <div className="testimonial-card">
-            <p className="t-quote">"Replaced my chaotic sticky-note system."</p>
-            <p className="t-body">Between university assignments, an internship, and a social life, I was dropping the ball everywhere. Now, I just throw everything into TaskPilot and let it handle my schedule.</p>
-            <div className="t-author">
-              <strong>Priya K.</strong>
-              <span>University Student</span>
-            </div>
-          </div>
-
-          <div className="testimonial-card">
-            <p className="t-quote">"The UI is gorgeous and lightning fast."</p>
-            <p className="t-body">I'm incredibly picky about the apps I use every day. The real-time syncing and clean, distraction-free interface make TaskPilot an absolute joy to use every morning.</p>
-            <div className="t-author">
-              <strong>Alex G.</strong>
-              <span>Content Creator</span>
+          <div className="feat-visual feat-visual--dashboard">
+            <div className="fv-card">
+              <div className="fv-greeting">Welcome back 👋</div>
+              <div className="fv-stat-row">
+                <div className="fv-stat" style={{background:'#fef3c7'}}>
+                  <span className="fv-stat-n" style={{color:'#d97706'}}>6</span>
+                  <span className="fv-stat-l">Total</span>
+                </div>
+                <div className="fv-stat" style={{background:'#e0f2fe'}}>
+                  <span className="fv-stat-n" style={{color:'#0284c7'}}>2</span>
+                  <span className="fv-stat-l">To Do</span>
+                </div>
+                <div className="fv-stat" style={{background:'#f3e8ff'}}>
+                  <span className="fv-stat-n" style={{color:'#7e22ce'}}>3</span>
+                  <span className="fv-stat-l">In Progress</span>
+                </div>
+                <div className="fv-stat" style={{background:'#dcfce7'}}>
+                  <span className="fv-stat-n" style={{color:'#16a34a'}}>1</span>
+                  <span className="fv-stat-l">Done</span>
+                </div>
+              </div>
+              <div className="fv-progress-bar">
+                <div className="fv-progress-fill" style={{width:'17%'}}></div>
+              </div>
+              <div className="fv-progress-label">17% complete</div>
+              <div className="fv-project-row">
+                <span className="fv-folder-icon">📁</span>
+                <span className="fv-proj-name">Task Manager Frontend</span>
+                <span className="fv-proj-badge">Owner</span>
+              </div>
+              <div className="fv-project-row">
+                <span className="fv-folder-icon">📁</span>
+                <span className="fv-proj-name">Task Manager Backend</span>
+                <span className="fv-proj-badge fv-proj-badge--member">Member</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* ── Feature: All Tasks ── */}
+      <section className="feat-section feat-section--alt">
+        <div className="feat-row feat-row--reverse">
+          <div className="feat-visual feat-visual--tasks">
+            <div className="fv-card">
+              <div className="fv-table-head">
+                <span>TASK</span><span>STATUS</span><span>PRIORITY</span><span>DUE</span>
+              </div>
+              <div className="fv-table-row">
+                <span className="fv-task-name">Interview Prep</span>
+                <span className="fv-badge fv-badge--inprogress">In Progress</span>
+                <span className="fv-badge fv-badge--medium">Medium</span>
+                <span className="fv-overdue">Overdue</span>
+              </div>
+              <div className="fv-table-row">
+                <span className="fv-task-name">Endpoints</span>
+                <span className="fv-badge fv-badge--inprogress">In Progress</span>
+                <span className="fv-badge fv-badge--high">High</span>
+                <span className="fv-overdue">Overdue</span>
+              </div>
+              <div className="fv-table-row">
+                <span className="fv-task-name fv-task-done">Play Hockey</span>
+                <span className="fv-badge fv-badge--done">Completed</span>
+                <span className="fv-badge fv-badge--medium">Medium</span>
+                <span className="fv-done-date">May 22</span>
+              </div>
+              <div className="fv-table-row">
+                <span className="fv-task-name">Create API</span>
+                <span className="fv-badge fv-badge--todo">Todo</span>
+                <span className="fv-badge fv-badge--medium">Medium</span>
+                <span className="fv-overdue">Overdue</span>
+              </div>
+            </div>
+          </div>
+          <div className="feat-text">
+            <span className="feat-tag feat-tag--purple">All Tasks</span>
+            <h2>Every task, every project,<br/>one table</h2>
+            <p>All Tasks pulls together everything across your personal lists and team projects into a single sortable table. Status, priority, due date, assignee — all visible, all editable without leaving the view.</p>
+            <ul className="feat-list">
+              <li><IconCheck /> Overdue tasks flagged in red automatically</li>
+              <li><IconCheck /> Edit or delete tasks inline</li>
+              <li><IconCheck /> Personal and project tasks unified</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Feature: Team ── */}
+      <section className="feat-section">
+        <div className="feat-row">
+          <div className="feat-text">
+            <span className="feat-tag feat-tag--green">Team</span>
+            <h2>Invite your team,<br/>control the access</h2>
+            <p>Add collaborators by email, assign them to specific projects, and set whether they're an Owner or Member. You stay in control of who can see and change what — without a settings maze.</p>
+            <ul className="feat-list">
+              <li><IconCheck /> Invite by email in one click</li>
+              <li><IconCheck /> Per-project role assignment</li>
+              <li><IconCheck /> Full directory of who has access to what</li>
+            </ul>
+          </div>
+          <div className="feat-visual feat-visual--team">
+            <div className="fv-card">
+              <div className="fv-team-title">Team Directory</div>
+              <div className="fv-member-row">
+                <div className="fv-avatar">A</div>
+                <div className="fv-member-info">
+                  <span className="fv-member-email">ankit1122@gmail.com <em>(You)</em></span>
+                  <div className="fv-role-tags">
+                    <span className="fv-role fv-role--owner">Task Manager Frontend · OWNER</span>
+                    <span className="fv-role fv-role--member">Task Manager Backend · MEMBER</span>
+                  </div>
+                </div>
+              </div>
+              <div className="fv-member-row">
+                <div className="fv-avatar fv-avatar--teal">A</div>
+                <div className="fv-member-info">
+                  <span className="fv-member-email">ansh@gmail.com</span>
+                  <div className="fv-role-tags">
+                    <span className="fv-role fv-role--owner">Task Manager Backend · OWNER</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Feature: Analytics ── */}
+      <section className="feat-section feat-section--alt">
+        <div className="feat-row feat-row--reverse">
+          <div className="feat-visual feat-visual--analytics">
+            <div className="fv-card">
+              <div className="fv-analytics-stats">
+                <div className="fv-analytics-stat">
+                  <span className="fv-analytics-n">85</span>
+                  <span className="fv-analytics-l">Prod Score</span>
+                </div>
+                <div className="fv-analytics-stat">
+                  <span className="fv-analytics-n" style={{color:'#16a34a'}}>33%</span>
+                  <span className="fv-analytics-l">Completion Rate</span>
+                </div>
+                <div className="fv-analytics-stat">
+                  <span className="fv-analytics-n" style={{color:'#ef4444'}}>2</span>
+                  <span className="fv-analytics-l">Overdue</span>
+                </div>
+              </div>
+              <div className="fv-donut-row">
+                <svg viewBox="0 0 80 80" width="80" height="80">
+                  <circle cx="40" cy="40" r="30" fill="none" stroke="#f1f5f9" strokeWidth="12"/>
+                  <circle cx="40" cy="40" r="30" fill="none" stroke="#16a34a" strokeWidth="12"
+                    strokeDasharray="62.8 125.6" strokeDashoffset="15" strokeLinecap="round"/>
+                  <circle cx="40" cy="40" r="30" fill="none" stroke="#ef4444" strokeWidth="12"
+                    strokeDasharray="125.6 0" strokeDashoffset="-47.8" opacity="0.25" strokeLinecap="round"/>
+                </svg>
+                <div className="fv-donut-legend">
+                  <span><i style={{background:'#16a34a'}}></i>Completed 33%</span>
+                  <span><i style={{background:'#ef4444'}}></i>Overdue 67%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="feat-text">
+            <span className="feat-tag feat-tag--amber">Analytics</span>
+            <h2>Know exactly how<br/>productive you've been</h2>
+            <p>Analytics runs a daily ETL pipeline on your task data and surfaces a Prod Score — a single number reflecting your completion rate, overdue tasks, and weekly momentum. Filter by personal tasks or any project.</p>
+            <ul className="feat-list">
+              <li><IconCheck /> Python ETL-powered Prod Score</li>
+              <li><IconCheck /> Weekly activity and completion charts</li>
+              <li><IconCheck /> Overdue task trends and action radar</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ── */}
+      <section className="how-section">
+        <h2 className="how-title">Up and running in minutes</h2>
+        <p className="how-sub">No onboarding call. No setup fee. Just sign up and start moving work forward.</p>
+        <div className="how-steps">
+          <div className="how-step">
+            <div className="how-step-num">01</div>
+            <h3>Create a project</h3>
+            <p>Give it a name, set it active. Invite teammates by email and assign each person an Owner or Member role.</p>
+          </div>
+          <div className="how-connector" />
+          <div className="how-step">
+            <div className="how-step-num">02</div>
+            <h3>Add and assign tasks</h3>
+            <p>Create tasks with due dates, priority levels, and assignees. Or just start with your personal My Tasks list — no project needed.</p>
+          </div>
+          <div className="how-connector" />
+          <div className="how-step">
+            <div className="how-step-num">03</div>
+            <h3>Track and improve</h3>
+            <p>Watch your Prod Score update daily. See what's overdue, what's moving, and where your team needs focus.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section className="testimonials-section">
+        <h2 className="section-title">What people are saying</h2>
+        <div className="testimonials-grid">
+          <div className="testimonial-card">
+            <div className="t-stars">★★★★★</div>
+            <p className="t-body">"Finally a task tool that doesn't need a tutorial. I created a project, added my tasks, and had my whole sprint laid out in under ten minutes."</p>
+            <div className="t-author">
+              <div className="t-avatar">SL</div>
+              <div><strong>Sarah L.</strong><span>Freelance Designer</span></div>
+            </div>
+          </div>
+          <div className="testimonial-card">
+            <div className="t-stars">★★★★★</div>
+            <p className="t-body">"The overdue flagging alone is worth it. My whole team knows exactly what's slipping without anyone having to chase anyone."</p>
+            <div className="t-author">
+              <div className="t-avatar">DR</div>
+              <div><strong>David R.</strong><span>Indie Developer</span></div>
+            </div>
+          </div>
+          <div className="testimonial-card">
+            <div className="t-stars">★★★★★</div>
+            <p className="t-body">"I use My Tasks for personal stuff and team projects for uni group work. The fact that both show up in All Tasks together is genuinely useful."</p>
+            <div className="t-author">
+              <div className="t-avatar">PK</div>
+              <div><strong>Priya K.</strong><span>University Student</span></div>
+            </div>
+          </div>
+          <div className="testimonial-card">
+            <div className="t-stars">★★★★★</div>
+            <p className="t-body">"The Prod Score is weirdly motivating. Seeing that number drop when I miss deadlines has made me more disciplined than any reminder app I've tried."</p>
+            <div className="t-author">
+              <div className="t-avatar">AG</div>
+              <div><strong>Alex G.</strong><span>Content Creator</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section className="cta-section">
+        <div className="cta-inner">
+          <h2 className="cta-title">Start tracking your work today</h2>
+          <p className="cta-sub">Free to use. No credit card. Works solo or with a team.</p>
+          <div className="cta-actions">
+            <button onClick={() => openAuth('signup')} className="btn-cta-primary">
+              Create your workspace <IconArrowRight />
+            </button>
+            <button onClick={() => openAuth('login')} className="btn-cta-ghost">
+              Sign in
+            </button>
+          </div>
+        </div>
+      </section>
 
       {/* ── Footer ── */}
       <footer className="landing-footer">
-        <div className="footer-content">
-          <div className="landing-brand">
-            <LogoIcon />
-            <span className="brand-text">TaskPilot</span>
+        <div className="footer-top">
+          <div className="footer-brand-col">
+            <div className="landing-brand">
+              <LogoIcon />
+              <span className="brand-text">TaskPilot</span>
+            </div>
+            <p className="footer-tagline">Track tasks. Know your score. Ship faster.</p>
           </div>
+          <div className="footer-links-col">
+            <div className="footer-link-group">
+              <span className="footer-link-heading">Product</span>
+              <a href="#">Dashboard</a>
+              <a href="#">Projects</a>
+              <a href="#">Analytics</a>
+              <a href="#">Team</a>
+            </div>
+            <div className="footer-link-group">
+              <span className="footer-link-heading">Account</span>
+              <a href="#" onClick={(e) => { e.preventDefault(); openAuth('signup'); }}>Sign up free</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); openAuth('login'); }}>Log in</a>
+            </div>
+          </div>
+        </div>
+        <div className="footer-bottom">
           <p className="footer-copy">© 2026 TaskPilot. Built for the modern web.</p>
         </div>
       </footer>
-
-      {/* ── Auth Modal ── */}
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-        initialMode={authMode} 
-      />
     </div>
   );
 };

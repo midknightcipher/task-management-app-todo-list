@@ -8,17 +8,18 @@ interface Props {
 }
 
 export const ProductivityHeatmap: React.FC<Props> = ({ workspaceId }) => {
-  const [data, setData] = useState<HeatmapData[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
-  }, [workspaceId]); // re-fetch when workspace changes
+  }, [workspaceId]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await analyticsAPI.getProductivityHeatmap(workspaceId ?? undefined);
+      const currentYear = new Date().getFullYear();
+      const response = await analyticsAPI.getHeatmap(currentYear, workspaceId ?? undefined);
       setData(response.data);
     } catch (error) {
       console.error('Failed to fetch heatmap data:', error);
@@ -36,7 +37,7 @@ export const ProductivityHeatmap: React.FC<Props> = ({ workspaceId }) => {
   });
 
   const dataMap = new Map(
-    data.map(item => [item.date.split('T')[0], Number(item.completed_count)])
+    data.map(item => [item.date.split('T')[0], Number(item.count || item.completed_count || 0)])
   );
 
   const getIntensity = (count: number): string => {

@@ -3,12 +3,12 @@ name: Analytics ETL Pipeline
 on:
   schedule:
     - cron: "*/15 * * * *"
-
   workflow_dispatch:
 
 jobs:
   analytics:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     defaults:
       run:
@@ -31,5 +31,6 @@ jobs:
       - name: Run Analytics Pipeline
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
         run: |
           python analytics_job.py

@@ -1,18 +1,20 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { analyticsAPI } from '../../services/api';
-import { DashboardStats, HeatmapData, ActionRadarData } from '../../types';
+import { analyticsAPI, LiveKPIs, TrendData, HeatmapPoint } from '../../services/api';
+import { ActionRadarData } from '../../types';
 
 interface AnalyticsState {
-  stats: DashboardStats | null;
-  heatmap: HeatmapData[];
+  kpis: LiveKPIs | null;
+  trends: TrendData[];
+  heatmap: HeatmapPoint[];
   actionRadar: ActionRadarData;
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
-  currentWorkspaceId: string; // 'personal' or actual ID
+  currentWorkspaceId: string; 
   error: string | null;
 }
 
 const initialState: AnalyticsState = {
-  stats: null,
+  kpis: null,
+  trends: [],
   heatmap: [],
   actionRadar: { urgent: [], stale: [] },
   status: 'idle',
@@ -20,24 +22,33 @@ const initialState: AnalyticsState = {
   error: null,
 };
 
-export const fetchAnalytics = createAsyncThunk('analytics/fetch', async (workspaceId: string, { rejectWithValue }) => {
-  try {
-    const apiParam = workspaceId === 'personal' ? undefined : workspaceId;
-    const [statsRes, heatmapRes, radarRes] = await Promise.all([
-      analyticsAPI.getDashboardStats(apiParam),
-      analyticsAPI.getProductivityHeatmap(apiParam),
-      analyticsAPI.getActionRadar(apiParam)
-    ]);
-    return {
-      workspaceId,
-      stats: statsRes.data,
-      heatmap: heatmapRes.data || [],
-      actionRadar: radarRes.data
-    };
-  } catch (err: any) {
-    return rejectWithValue('Failed to load analytics');
+export const fetchAnalytics = createAsyncThunk(
+  'analytics/fetch',
+  async (workspaceId: string, { rejectWithValue }) => {
+    try {
+      const isWorkspace = workspaceId !== 'personal';
+      const wsParam = isWorkspace ? workspaceId : undefined;
+      const currentYear = new Date().getFullYear();
+
+      const [kpiRes, trendRes, heatRes, radarRes] = await Promise.all([
+        isWorkspace ? analyticsAPI.getWorkspaceKPIs(wsParam!) : analyticsAPI.getKPIs(),
+        analyticsAPI.getTrends('30d', wsParam),
+        analyticsAPI.getHeatmap(currentYear, wsParam),
+        analyticsAPI.getActionRadar(wsParam)
+      ]);
+
+      return {
+        workspaceId,
+        kpis: kpiRes.data,
+        trends: trendRes.data || [],
+        heatmap: heatRes.data || [],
+        actionRadar: radarRes.data
+      };
+    } catch (err: any) {
+      return rejectWithValue('Failed to load analytics');
+    }
   }
-});
+);
 
 const analyticsSlice = createSlice({
   name: 'analytics',
@@ -52,7 +63,8 @@ const analyticsSlice = createSlice({
       .addCase(fetchAnalytics.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.currentWorkspaceId = action.payload.workspaceId;
-        state.stats = action.payload.stats;
+        state.kpis = action.payload.kpis;
+        state.trends = action.payload.trends;
         state.heatmap = action.payload.heatmap;
         state.actionRadar = action.payload.actionRadar;
       })

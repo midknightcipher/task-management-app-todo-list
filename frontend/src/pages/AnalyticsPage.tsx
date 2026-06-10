@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { fetchAnalytics } from '../store/slices/analyticsSlice';
 import { fetchWorkspaces } from '../store/slices/workspaceSlice';
+import { fetchAnalytics } from '../store/slices/analyticsSlice';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 import AppLayout from '../components/AppLayout';
 import './Pages.css';
@@ -11,14 +11,12 @@ const IconCheck = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="no
 const IconClock = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
 const IconAlert = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
 const IconPercent = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>;
-const IconActivity = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>;
 const IconCircle = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2"><circle cx="12" cy="12" r="10"/></svg>;
 
 export const AnalyticsPage: React.FC = () => {
   const dispatch = useAppDispatch();
-  
   const { workspaces, status: wsStatus } = useAppSelector((state) => state.workspaces);
-  const { stats, heatmap: rawHeatmap, actionRadar, status: analyticsStatus, currentWorkspaceId } = useAppSelector((state) => state.analytics);
+  const { kpis, trends, heatmap, actionRadar, status: analyticsStatus, currentWorkspaceId } = useAppSelector((state) => state.analytics);
 
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>(currentWorkspaceId); 
 
@@ -39,21 +37,23 @@ export const AnalyticsPage: React.FC = () => {
     return '#16a34a';                  
   };
 
-  let pieData: {name: string, value: number, color: string}[] = [];
-  if (stats) {
-    let completed = stats.mode === 'personal' ? stats.tasksCompleted : stats.completedTasks;
-    let total = stats.mode === 'personal' ? stats.tasksCreated : stats.totalTasks;
-    let overdue = stats.overdueTasks; 
-    const pending = Math.max(0, total - completed - overdue);
+  const isLoading = analyticsStatus === 'loading' || !kpis;
 
+  let pieData: {name: string, value: number, color: string}[] = [];
+  if (kpis) {
+    const pending = Math.max(0, kpis.total_tasks - kpis.completed_tasks - kpis.overdue_tasks);
     pieData = [
-      { name: 'Completed', value: completed, color: '#10b981' }, 
+      { name: 'Completed', value: kpis.completed_tasks, color: '#10b981' }, 
       { name: 'Pending', value: pending, color: '#f59e0b' },     
-      { name: 'Overdue', value: overdue, color: '#ef4444' }      
+      { name: 'Overdue', value: kpis.overdue_tasks, color: '#ef4444' }      
     ].filter(d => d.value > 0);
   }
 
-  const isLoading = analyticsStatus === 'loading' || !stats;
+  const formattedTrends = trends?.map(t => ({
+    day: new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    completed: t.tasks_completed,
+    created: t.tasks_created
+  })) || [];
 
   return (
     <AppLayout>
@@ -70,36 +70,23 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '50px', color: '#64748b'}}>Loading Pipeline Analytics...</div>
+          <div style={{ textAlign: 'center', padding: '50px', color: '#64748b'}}>Loading Live Analytics...</div>
         ) : (
           <>
             <div className="analytics-stats-grid">
-              {stats.mode === 'personal' ? (
-                <>
-                  <div className="stat-card-modern"><div className="icon-box" style={{background: '#e0f2fe', color: '#0ea5e9'}}><IconStack /></div><div className="info"><h3>{stats.tasksCreated}</h3><p className="title">Total Tasks</p><p className="sub">All tracked tasks</p></div></div>
-                  <div className="stat-card-modern"><div className="icon-box" style={{background: '#dcfce7', color: '#10b981'}}><IconCheck /></div><div className="info"><h3>{stats.tasksCompleted}</h3><p className="title">Completed</p><p className="sub">Successfully finished</p></div></div>
-                  <div className="stat-card-modern"><div className="icon-box" style={{background: '#f3e8ff', color: '#8b5cf6'}}><IconPercent /></div><div className="info"><h3>{stats.completionRate}%</h3><p className="title">Completion Rate</p><p className="sub">Volume processed</p></div></div>
-                  <div className="stat-card-modern"><div className="icon-box" style={{background: '#fee2e2', color: '#ef4444'}}><IconAlert /></div><div className="info"><h3>{stats.overdueTasks}</h3><p className="title">Overdue Tasks</p><p className="sub">Missed deadlines</p></div></div>
-                  <div className="stat-card-modern"><div className="icon-box" style={{background: '#fef3c7', color: '#f59e0b'}}><IconActivity /></div><div className="info"><h3>{stats.productivityScore}</h3><p className="title">Prod Score</p><p className="sub">ETL Calculated</p></div></div>
-                </>
-              ) : (
-                <>
-                  <div className="stat-card-modern"><div className="icon-box" style={{background: '#e0f2fe', color: '#0ea5e9'}}><IconStack /></div><div className="info"><h3>{stats.totalTasks}</h3><p className="title">Total Tasks</p><p className="sub">Workspace volume</p></div></div>
-                  <div className="stat-card-modern"><div className="icon-box" style={{background: '#dcfce7', color: '#10b981'}}><IconCheck /></div><div className="info"><h3>{stats.completedTasks}</h3><p className="title">Completed</p><p className="sub">By all members</p></div></div>
-                  <div className="stat-card-modern"><div className="icon-box" style={{background: '#f3e8ff', color: '#8b5cf6'}}><IconPercent /></div><div className="info"><h3>{stats.activeMembers}</h3><p className="title">Active Members</p><p className="sub">In this workspace</p></div></div>
-                  <div className="stat-card-modern"><div className="icon-box" style={{background: '#fee2e2', color: '#ef4444'}}><IconAlert /></div><div className="info"><h3>{stats.overdueTasks}</h3><p className="title">Overdue Tasks</p><p className="sub">Requires attention</p></div></div>
-                  <div className="stat-card-modern"><div className="icon-box" style={{background: '#fef3c7', color: '#f59e0b'}}><IconActivity /></div><div className="info"><h3>{stats.healthScore}/100</h3><p className="title">Team Health</p><p className="sub">ETL Calculated</p></div></div>
-                </>
-              )}
+              <div className="stat-card-modern"><div className="icon-box" style={{background: '#e0f2fe', color: '#0ea5e9'}}><IconStack /></div><div className="info"><h3>{kpis?.total_tasks || 0}</h3><p className="title">Total Tasks</p><p className="sub">All tracked tasks</p></div></div>
+              <div className="stat-card-modern"><div className="icon-box" style={{background: '#dcfce7', color: '#10b981'}}><IconCheck /></div><div className="info"><h3>{kpis?.completed_tasks || 0}</h3><p className="title">Completed</p><p className="sub">Successfully finished</p></div></div>
+              <div className="stat-card-modern"><div className="icon-box" style={{background: '#f3e8ff', color: '#8b5cf6'}}><IconPercent /></div><div className="info"><h3>{((kpis?.completion_rate || 0) * 100).toFixed(0)}%</h3><p className="title">Completion Rate</p><p className="sub">Volume processed</p></div></div>
+              <div className="stat-card-modern"><div className="icon-box" style={{background: '#fee2e2', color: '#ef4444'}}><IconAlert /></div><div className="info"><h3>{kpis?.overdue_tasks || 0}</h3><p className="title">Overdue Tasks</p><p className="sub">Missed deadlines</p></div></div>
             </div>
 
             <div style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>
               <div className="proj-card" style={{ flex: '6' }}>
-                <h3 style={{marginBottom: '6px', fontSize: '16px'}}>Weekly Activity</h3>
-                <p className="text-muted" style={{marginBottom: '20px'}}>Tasks created vs completed — pipeline history</p>
+                <h3 style={{marginBottom: '6px', fontSize: '16px'}}>30-Day Activity Trends</h3>
+                <p className="text-muted" style={{marginBottom: '20px'}}>Tasks created vs completed — OLAP history</p>
                 <div style={{ width: '100%', height: '250px' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={stats.weeklyTrend}>
+                    <LineChart data={formattedTrends}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
                       <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} allowDecimals={false} />
@@ -114,7 +101,7 @@ export const AnalyticsPage: React.FC = () => {
 
               <div className="proj-card" style={{ flex: '4' }}>
                 <h3 style={{marginBottom: '6px', fontSize: '16px'}}>Task Distribution</h3>
-                <p className="text-muted" style={{marginBottom: '20px'}}>Completed vs Pending vs Overdue</p>
+                <p className="text-muted" style={{marginBottom: '20px'}}>Live Snapshot: Completed vs Pending vs Overdue</p>
                 <div style={{ width: '100%', height: '250px' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -146,8 +133,8 @@ export const AnalyticsPage: React.FC = () => {
                        const days = Array.from({ length: daysInMonth }, (_, i) => {
                          const dayNum = i + 1;
                          const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                         const dayData = rawHeatmap.find(h => h.date.startsWith(dateStr));
-                         const count = dayData ? Number(dayData.completed_count) : 0;
+                         const dayData = heatmap.find(h => h.date === dateStr);
+                         const count = dayData ? Number(dayData.count) : 0;
                          return (
                            <div key={dateStr} title={`${count} tasks completed on ${dateStr}`} style={{ width: '32px', height: '32px', borderRadius: '4px', backgroundColor: getHeatmapColor(count), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, color: count > 0 ? '#14532d' : '#94a3b8', border: count > 0 ? '1px solid transparent' : '1px solid #e2e8f0', cursor: 'pointer' }}>
                              {dayNum}
