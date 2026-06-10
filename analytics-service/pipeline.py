@@ -12,9 +12,10 @@ load_dotenv()
 
 
 def get_db_connection():
-    psycopg2.connect(
-    os.getenv("DATABASE_URL"),
-    connect_timeout=15)
+    return psycopg2.connect(
+        os.getenv("DATABASE_URL"),
+        connect_timeout=15
+    )
 
 
 
